@@ -1,5 +1,4 @@
 import argparse
-import ast
 import os
 
 
@@ -19,12 +18,6 @@ def parse_opt():
         help="Use GPU if available",
     )
     parser.add_argument(
-        "--imgsz",
-        type=lambda size: ast.literal_eval(size),
-        default=(640, 640),
-        help="Image input size",
-    )
-    parser.add_argument(
         "--topk",
         type=int,
         default=100,
@@ -42,6 +35,7 @@ def parse_opt():
         default=0.4,
         help="Float representing the threshold for deciding whether boxes overlap too much with respect to IOU",
     )
+    parser.add_argument("--labels", type=str, help="Using custom labels via external txt file")
     parser.add_argument(
         "--dnn",
         action="store_true",
@@ -58,12 +52,15 @@ def parse_opt():
 
     # path checking
     if not os.path.exists(opt.model):
-        raise FileNotFoundError("Wrong path! Not Found ONNX model.")
+        raise FileNotFoundError("Wrong path! Not found ONNX model.")
+    if opt.labels:
+        if not os.path.exists(opt.model):
+            raise FileNotFoundError("Wrong path! Not found labels file.")
     if opt.image:
         if not os.path.exists(opt.image):
             raise FileNotFoundError("Wrong path! Not found image source.")
     if opt.video:
-        if not os.path.exists(opt.video):
+        if not os.path.exists(opt.video) and opt.video != "0":
             raise FileNotFoundError("Wrong path! Not found video source.")
 
     # logging

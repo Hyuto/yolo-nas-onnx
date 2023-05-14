@@ -1,3 +1,7 @@
+import os
+from typing import Any
+
+
 class Colors:
     """Ultralytics color palette https://ultralytics.com/"""
 
@@ -19,15 +23,29 @@ class Colors:
         return tuple(int(h[1 + i : 1 + i + 2], 16) for i in (0, 2, 4))
 
 
-# fmt: off
-COCO_CLASS = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
-        "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
-        "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
-        "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
-        "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
-        "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-        "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
-        "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", 
-        "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
-        "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"]
-# fmt: on
+class Labels:
+    # fmt: off
+    # default coco classes
+    labels = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+            "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
+            "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
+            "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+            "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
+            "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
+            "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
+            "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", 
+            "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
+            "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"]
+    # fmt: on
+    colors = Colors()
+
+    def __init__(self, from_file=None):
+        if from_file:
+            self.labels = self._get_labels_from_file(from_file)
+
+    def __call__(self, i, use_bgr=False):
+        return self.labels[i], self.colors(i, use_bgr)
+
+    def _get_labels_from_file(self, path):
+        with open(path) as f:
+            self.labels = [x.strip() for x in f.readlines()]

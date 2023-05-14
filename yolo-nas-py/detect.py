@@ -1,21 +1,66 @@
+from pathlib import Path
+
 import numpy as np
 import cv2
 
 from yolo_nas import preprocess, postprocess
 from yolo_nas.models import ORT_LOADER, DNN_LOADER
+from yolo_nas.draw import draw_box
 from yolo_nas.cli import parse_opt
+from yolo_nas.utils import Labels
+
+
+def detect(net, source, input_size, labels):
+    input_, ratios = preprocess(source, input_size)
+    outputs = net.forward(input_)
+    boxes, scores, classes = postprocess(outputs, ratios)
+    selected = cv2.dnn.NMSBoxes(boxes, scores, opt.score_tresh, opt.iou_tresh, opt.topk)
+
+    for i in selected:
+        box = boxes[i, :].astype(np.int32).flatten()
+        score = float(scores[i])
+        label, color = labels(classes[i], use_bgr=True)
+
+        draw_box(source, box, label, score, color)
+    return source
 
 
 def main(opt):
     net = DNN_LOADER(opt.model, opt.gpu) if opt.dnn else ORT_LOADER(opt.model, opt.gpu)
+    _, _, input_height, input_width = net.input_shape  # [b, c, h, w]
+    net.warmup()
+
+    labels = Labels(opt.labels)
 
     if opt.image:
         img = cv2.imread(opt.image)
-        input_, ratios = preprocess(img, input_size=opt.imgsz)
-        outputs = net.forward(input_)
-        postprocess(outputs, ratios, opt.score_tresh, opt.iou_tresh, opt.topk)
+        img = detect(net, img, (input_width, input_height), labels)
+
+        cv2.imshow(Path(opt.image).stem, img)
+        cv2.waitKey(0)
     elif opt.video:
-        pass
+        # Video processing
+        vid_source = 0 if opt.video == "0" else opt.video
+        cap = cv2.VideoCapture(vid_source)
+        name = "Webcam" if opt.video == "0" else Path(opt.video).stem
+        print("\033[1m\033[94mProcessing video,\033[0m press 'q' to exit.")
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+
+            if not ret:
+                break
+
+            frame = detect(net, frame, (input_width, input_height), labels)
+
+            cv2.imshow(name, frame)
+
+            if cv2.waitKey(1) == ord("q"):
+                break
+
+        cap.release()
+
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":

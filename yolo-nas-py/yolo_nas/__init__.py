@@ -24,7 +24,7 @@ def preprocess(img, input_size):
     return input_img, (x_ratio, y_ratio)
 
 
-def postprocess(outputs, ratios, score_thresh, iou_thresh, top_k):
+def postprocess(outputs, ratios):
     boxes, raw_scores = outputs
     x_ratio, y_ratio = ratios
 
@@ -36,6 +36,4 @@ def postprocess(outputs, ratios, score_thresh, iou_thresh, top_k):
     boxes = np.squeeze(boxes, 0)
     scores = raw_scores.max(axis=2).flatten()
     classes = np.argmax(raw_scores, axis=2).flatten()
-
-    selected = cv2.dnn.NMSBoxes(boxes, scores, score_thresh, iou_thresh, top_k)
-    print(selected)
+    return boxes, scores, classes

@@ -10,12 +10,7 @@ class ORT_LOADER:
         self._load_model(path, gpu)
 
     def _load_model(self, path: str, use_gpu: bool):
-        """Load model and get model input and output information
-
-        Args:
-            path (str): Model path
-            use_gpu (bool): Using GPU
-        """
+        """Load model and get model input and output information"""
         is_gpu_available = ort.get_device() == "GPU"
         if not is_gpu_available and use_gpu:
             print("\033[1m\033[93mWarning: \033[0m GPU is not available, using CPU to process.")
@@ -40,7 +35,7 @@ class ORT_LOADER:
     def warmup(self):
         "Warming up model"
         for _ in range(3):
-            dummy = np.random.rand(self.input_shape)
+            dummy = np.random.rand(*self.input_shape).astype(np.float32)
             _ = self.forward(dummy)
 
 
@@ -49,7 +44,12 @@ class DNN_LOADER:
 
     def __init__(self, path: str, gpu: bool = False):
         self.net = cv2.dnn.readNet(path)  # overload net
-        self.net_ort = ORT_LOADER(path)
+
+        # get input and output info from ort
+        net_ort = ORT_LOADER(path)
+        self.input_name = net_ort.input_name
+        self.input_shape = net_ort.input_shape
+        self.output_names = net_ort.output_names
 
         is_gpu_available = True if cv2.cuda.getCudaEnabledDeviceCount() else False
         if not is_gpu_available and gpu:
@@ -65,11 +65,11 @@ class DNN_LOADER:
 
     def forward(self, input_):
         """Get model prediction"""
-        self.net.setInput(input_, self.net_ort.input_name)
-        return self.net.forward(self.net_ort.output_names)
+        self.net.setInput(input_, self.input_name)
+        return self.net.forward(self.output_names)
 
     def warmup(self):
         "Warming up model"
         for _ in range(3):
-            dummy = np.random.rand(self.input_shape)
+            dummy = np.random.rand(*self.input_shape).astype(np.float32)
             _ = self.forward(dummy)
