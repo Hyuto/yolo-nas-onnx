@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <filesystem>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn.hpp>
@@ -45,42 +46,46 @@ void draw_box(cv::Mat &source, cv::Rect &box, int &label, float &score, cv::Scal
     double size = std::min<int>(source.cols, source.rows) * 0.0007;
     int thickness = (int)std::floor((float)std::min<int>(source.cols, source.rows) * 0.001f);
     int baseline = 0;
-    std::string text = COCO_LABELS[label] + " - " + std::to_string(score) + "%";
+    std::string text = COCO_LABELS[label] + " - " + std::to_string(score * 100).substr(0, 5) + "%";
     cv::Size labelSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, size, thickness, &baseline);
     baseline += thickness;
 
-    /*
-    cv2.rectangle(
-        source,
-        (box[0] - 1, box[1] - int(label_height * 2)),
-        (box[0] + int(label_width * 1.1), box[1]),
-        color,
-        cv2.FILLED,
-    )
-    cv2.putText(
-        source,
-        f"{label} - {round(score, 2)}%",
-        (box[0], box[1] - int(label_height * 0.7)),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        size,
-        [255, 255, 255],
-        thickness,
-        cv2.LINE_AA,
-    ) */
+    cv::Rect textBox((int)(box.x - size), box.y - labelSize.height * 2,
+                     (int)(labelSize.width * 1.05), labelSize.height * 2);
+    cv::rectangle(source, textBox, color, cv::FILLED);
+    cv::putText(source, text, cv::Point(box.x + 1, box.y - (int)(labelSize.height * 0.6)),
+                cv::FONT_HERSHEY_SIMPLEX, size, cv::Scalar(255, 255, 255), thickness,
+                cv::LINE_AA);
 }
 
-int main()
+void exists(std::filesystem::path &path)
+{
+    if (!std::filesystem::exists(path))
+    {
+        std::cerr << "\033[1m\033[91mNot found:\033[0m " + path.generic_string() << std::endl;
+        std::abort();
+    }
+}
+
+int main(int argc, char **argv)
 {
     // configs
-    std::string imgPath = "<IMG-PATH>";
-    std::string netPath = "<YOLO-NAS-ONNX-MODEL-PATH>";
+    std::filesystem::path imgPath{argv[2]};
+    std::filesystem::path netPath{argv[1]};
     std::vector<int> netInputShape{1, 3, 640, 640};
     float IOUThresh = 0.45f,
           scoreThresh = 0.3f;
     bool useCUDA = false;
     Colors colors;
 
-    cv::Mat img = cv::imread(imgPath);
+    std::string emoji = "🖼️";
+    std::cout << emoji + " \033[1m\033[94m" + "Detect: " + "\033[0mmodel=" + netPath.generic_string();
+    std::cout << " image=" + imgPath.generic_string() << std::endl;
+
+    exists(imgPath);
+    exists(netPath);
+
+    cv::Mat img = cv::imread(imgPath.generic_string());
     cv::Mat imgInput;
     cv::cvtColor(img, imgInput, cv::COLOR_BGR2RGB);
 
@@ -88,13 +93,13 @@ int main()
     int maxSize = std::max(imgInput.cols, imgInput.rows);
     int xPad = maxSize - imgInput.cols,
         yPad = maxSize - imgInput.rows;
-    float xRatio = (float)(maxSize / netInputShape[3]),
-          yRatio = (float)(maxSize / netInputShape[2]);
+    float xRatio = (float)maxSize / (float)netInputShape[3],
+          yRatio = (float)maxSize / (float)netInputShape[2];
     cv::copyMakeBorder(imgInput, imgInput, 0, yPad, 0, xPad, cv::BORDER_CONSTANT); // padding black
 
     imgInput = cv::dnn::blobFromImage(imgInput, 1 / 255.0f, cv::Size(netInputShape[3], netInputShape[2]));
 
-    cv::dnn::Net net = cv::dnn::readNetFromONNX(netPath);
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(netPath.generic_string());
     if (useCUDA && cv::cuda::getCudaEnabledDeviceCount() > 0)
     {
         std::cout << "Attempting to use CUDA" << std::endl;
@@ -130,10 +135,10 @@ int main()
         if ((float)maxScore < scoreThresh)
             continue;
 
-        int x = (int)std::floor(bboxes.at<float>(i, 0) * xRatio),
-            y = (int)std::floor(bboxes.at<float>(i, 1) * yRatio),
-            x1 = (int)std::floor(bboxes.at<float>(i, 2) * xRatio),
-            y1 = (int)std::floor(bboxes.at<float>(i, 3) * yRatio);
+        int x = (int)(bboxes.at<float>(i, 0) * xRatio),
+            y = (int)(bboxes.at<float>(i, 1) * yRatio),
+            x1 = (int)(bboxes.at<float>(i, 2) * xRatio),
+            y1 = (int)(bboxes.at<float>(i, 3) * yRatio);
         int w = x1 - x,
             h = y1 - y;
 
@@ -154,13 +159,13 @@ int main()
         int classID = labels[x];
         float score = scores[x];
         cv::Scalar color = colors.get(classID);
-        std::cout << classID << " " << color << std::endl;
         cv::rectangle(img, boxes[x], color, 2);
         draw_box(img, boxes[x], classID, score, color);
     }
 
-    cv::imshow("test", img);
+    cv::imshow(imgPath.filename().generic_string(), img);
     cv::waitKey(0);
+    cv::destroyAllWindows();
 
     return 0;
 }
