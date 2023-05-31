@@ -2,11 +2,11 @@
 
 #include <vector>
 
-inline std::string LogInfo(std::string header, std::string body);
+std::string LogInfo(std::string header, std::string body);
 
-inline std::string LogWarning(std::string header, std::string body);
+std::string LogWarning(std::string header, std::string body);
 
-inline std::string LogError(std::string header, std::string body);
+std::string LogError(std::string header, std::string body);
 
 void exists(std::string path);
 

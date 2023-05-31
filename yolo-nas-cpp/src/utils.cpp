@@ -1,12 +1,10 @@
 #include <iostream>
 #include <filesystem>
 
-std::string BCODE[] = {"\033[95m", "\033[94m", "\033[93m",
-                       "\033[91m", "\033[0m", "\033[1m"};
+std::string BCODE[] = {"\033[94m", "\033[93m", "\033[91m", "\033[0m", "\033[1m"};
 
 enum BCOLORS
 {
-    HEADER,
     OKBLUE,
     WARNING,
     FAIL,
@@ -14,19 +12,19 @@ enum BCOLORS
     BOLD
 };
 
-inline std::string LogInfo(std::string header, std::string body)
+std::string LogInfo(std::string header, std::string body)
 {
-    return BCODE[HEADER] + BCODE[OKBLUE] + header + ": " + BCODE[ENDC] + body;
+    return BCODE[BOLD] + BCODE[OKBLUE] + header + ": " + BCODE[ENDC] + body;
 }
 
-inline std::string LogWarning(std::string header, std::string body)
+std::string LogWarning(std::string header, std::string body)
 {
-    return "⚠️ " + BCODE[HEADER] + BCODE[WARNING] + header + ": " + BCODE[ENDC] + body;
+    return "⚠️ " + BCODE[BOLD] + BCODE[WARNING] + header + ": " + BCODE[ENDC] + body;
 }
 
-inline std::string LogError(std::string header, std::string body)
+std::string LogError(std::string header, std::string body)
 {
-    return "❌ " + BCODE[HEADER] + BCODE[FAIL] + header + ": " + BCODE[ENDC] + body;
+    return "❌ " + BCODE[BOLD] + BCODE[FAIL] + header + ": " + BCODE[ENDC] + body;
 }
 
 void exists(std::string path)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <optional>
+#include <vector>
 
 enum Source
 {
@@ -13,6 +13,10 @@ struct Config
     std::string netPath;
     Source type;
     std::string source;
+    std::vector<int> imgSize;
+    bool gpu;
+    float scoreTresh;
+    float iouTresh;
 };
 
 Config parseCLI(int argc, char **argv);
