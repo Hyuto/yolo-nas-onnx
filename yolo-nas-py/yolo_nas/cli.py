@@ -5,9 +5,7 @@ import os
 def parse_opt():
     parser = argparse.ArgumentParser(description="Detect using YOLO-NAS model")
     required = parser.add_argument_group("required arguments")
-    required.add_argument(
-        "-m", "--model", type=str, required=True, help="YOLO-NAS Segmentation onnx model path"
-    )
+    required.add_argument("-m", "--model", type=str, required=True, help="YOLO-NAS ONNX model path")
     source = parser.add_argument_group("source arguments")
     source.add_argument("-i", "--image", type=str, help="Image source")
     source.add_argument("-v", "--video", type=str, help="Video source")
@@ -18,12 +16,6 @@ def parse_opt():
         help="Use GPU if available",
     )
     parser.add_argument(
-        "--topk",
-        type=int,
-        default=100,
-        help="Integer representing the maximum number of boxes to be selected per class",
-    )
-    parser.add_argument(
         "--score-tresh",
         type=float,
         default=0.25,
@@ -32,10 +24,11 @@ def parse_opt():
     parser.add_argument(
         "--iou-tresh",
         type=float,
-        default=0.4,
+        default=0.45,
         help="Float representing the threshold for deciding whether boxes overlap too much with respect to IOU",
     )
     parser.add_argument("--labels", type=str, help="Using custom labels via external txt file")
+    parser.add_argument("--export", type=str, help="Export to a file (path with extension)")
     parser.add_argument(
         "--dnn",
         action="store_true",
@@ -62,6 +55,9 @@ def parse_opt():
     if opt.video:
         if not os.path.exists(opt.video) and opt.video != "0":
             raise FileNotFoundError("Wrong path! Not found video source.")
+    if opt.export:
+        if not os.path.exists(os.path.dirname(opt.export)):
+            raise FileNotFoundError("Wrong path! Export directory not found.")
 
     # logging
     args = vars(opt).items()

@@ -3,22 +3,22 @@ import cv2
 
 
 def preprocess(img, input_size):
+    # https://github.com/Deci-AI/super-gradients/blob/46120860cdc392d76382ea0cd7c5941d7ec1e360/src/super_gradients/training/processing/processing.py#L308
     source_height, source_width, _ = img.shape
     max_size = max(source_width, source_height)  # get max size
-    source_padded = np.zeros((max_size, max_size, 3), dtype=np.uint8)  # initial zeros mat
-    source_padded[:source_height, :source_width] = img.copy()  # place original image
+    x_pad, y_pad = max_size - source_width, max_size - source_height
+    source_padded = cv2.copyMakeBorder(img, 0, y_pad, 0, x_pad, cv2.BORDER_CONSTANT)
 
     ## ratios
-    x_ratio = max_size / 640
-    y_ratio = max_size / 640
+    x_ratio = max_size / input_size[0]
+    y_ratio = max_size / input_size[1]
 
     # run model
     input_img = cv2.dnn.blobFromImage(
         source_padded,
         1 / 255.0,
         input_size,
-        swapRB=False,
-        crop=False,
+        swapRB=True,
     )  # normalize and resize: [h, w, 3] => [1, 3, h, w]
 
     return input_img, (x_ratio, y_ratio)

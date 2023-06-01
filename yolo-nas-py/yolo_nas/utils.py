@@ -1,7 +1,3 @@
-import os
-from typing import Any
-
-
 class Colors:
     """Ultralytics color palette https://ultralytics.com/"""
 
@@ -48,4 +44,5 @@ class Labels:
 
     def _get_labels_from_file(self, path):
         with open(path) as f:
-            self.labels = [x.strip() for x in f.readlines()]
+            labels = [x.strip() for x in f.readlines()]
+        return labels
