@@ -11,14 +11,16 @@ from yolo_nas.utils import Labels
 
 
 def detect(net, source, input_size, labels):
-    input_, ratios = preprocess(source, input_size)
+    net_input = source.copy()
+    input_, prep_meta = preprocess(net_input, input_size)
     outputs = net.forward(input_)
-    boxes, scores, classes = postprocess(outputs, ratios)
+
+    boxes, scores, classes = postprocess(outputs, prep_meta)
     selected = cv2.dnn.NMSBoxes(boxes, scores, opt.score_tresh, opt.iou_tresh)
 
     for i in selected:
         box = boxes[i, :].astype(np.int32).flatten()
-        score = float(scores[i])
+        score = float(scores[i]) * 100
         label, color = labels(classes[i], use_bgr=True)
 
         draw_box(source, box, label, score, color)
