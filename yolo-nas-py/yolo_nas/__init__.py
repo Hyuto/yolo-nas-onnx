@@ -37,7 +37,8 @@ def preprocess(img, input_size):
     img = (img / 255.0).astype(np.float32)
 
     ## ImagePermute
-    img = cv2.dnn.blobFromImage(img, swapRB=False)
+    ### BGR (OpenCV default) -> RGB (YOLO-NAS default)
+    img = cv2.dnn.blobFromImage(img, swapRB=True)
     return img, PrepMetadata(
         scale_factors=scale_factor,
         padding=Padding(
