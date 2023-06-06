@@ -70,7 +70,7 @@ def main(configs):
             if not ret:
                 break
 
-            frame = detect(net, frame, (input_width, input_height), labels)
+            frame = detect(net, frame, pre_process, post_process, labels)
             cv2.imshow(name, frame)
 
             if cv2.waitKey(1) == ord("q"):
