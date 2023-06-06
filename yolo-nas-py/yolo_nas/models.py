@@ -2,6 +2,8 @@ import numpy as np
 import cv2
 import onnxruntime as ort
 
+from .utils import log_warning
+
 
 class ORT_LOADER:
     """ONNXRUNTIME model handler"""
@@ -13,7 +15,7 @@ class ORT_LOADER:
         """Load model and get model input and output information"""
         is_gpu_available = ort.get_device() == "GPU"
         if not is_gpu_available and use_gpu:
-            print("\033[1m\033[93mWarning: \033[0m GPU is not available, using CPU to process.")
+            log_warning("GPU", "GPU is not available, using CPU to process.")
             use_gpu = False
 
         providers = (
@@ -27,6 +29,15 @@ class ORT_LOADER:
         self.input_name = net_input.name
         self.input_shape = net_input.shape
         self.output_names = [x.name for x in self.net.get_outputs()]  # get output info
+
+    def assert_input_shape(self, input_shape=None):
+        if input_shape:
+            if input_shape != self.input_shape:
+                log_warning(
+                    "Input Shape",
+                    "Model have different input shape with the original input shape on metadata! "
+                    + "It can lead to lower detection performance.",
+                )
 
     def forward(self, input_):
         """Get model prediction"""
@@ -53,7 +64,7 @@ class DNN_LOADER:
 
         is_gpu_available = True if cv2.cuda.getCudaEnabledDeviceCount() else False
         if not is_gpu_available and gpu:
-            print("\033[1m\033[93mWarning: \033[0m GPU is not available, using CPU to process.")
+            log_warning("GPU", "GPU is not available, using CPU to process.")
             gpu = False
 
         if gpu:  # use CUDA if available
@@ -73,3 +84,9 @@ class DNN_LOADER:
         for _ in range(3):
             dummy = np.random.rand(*self.input_shape).astype(np.float32)
             _ = self.forward(dummy)
+
+
+def load_net(path, gpu=False, dnn=False):
+    if dnn:
+        return DNN_LOADER(path, gpu)
+    return ORT_LOADER(path, gpu)

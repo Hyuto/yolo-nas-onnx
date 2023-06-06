@@ -68,14 +68,65 @@ class Preprocessing:
 
     def __call__(self, img):
         img = img.copy()
-        metadata = {}
+        metadata = []
         for st in self.steps:
             if not st:
                 continue
             name, kwargs = list(st.items())[0]
             img, meta = self._call_fn(name)(img, **kwargs) if kwargs else self._call_fn(name)(img)
-            if meta:
-                metadata.update(meta)
+            metadata.append(meta)
 
         img = cv2.dnn.blobFromImage(img, swapRB=True)
         return img, metadata
+
+
+class Postprocessing:
+    def __init__(self, steps, iou_tresh, score_tresh):
+        self.steps = steps
+        self.iou_tresh = iou_tresh
+        self.score_tresh = score_tresh
+
+    def _rescale_boxes(self, boxes, metadata):
+        scale_factors_w, scale_factors_h = metadata["scale_factors"]
+        boxes[:, [0, 2]] /= scale_factors_w
+        boxes[:, [1, 3]] /= scale_factors_h
+        return boxes
+
+    def _shift_bboxes(self, boxes, metadata):
+        pad_top, _, pad_left, _ = metadata["padding"]
+        boxes[:, [0, 2]] -= pad_left
+        boxes[:, [1, 3]] -= pad_top
+        return boxes
+
+    def _call_fn(self, name):
+        mapper = {
+            "DetRescale": self._rescale_boxes,
+            "DetLongMaxRescale": self._rescale_boxes,
+            "BotRightPad": self._shift_bboxes,
+            "CenterPad": self._shift_bboxes,
+            "Standardize": None,
+            "Normalize": None,
+        }
+        return mapper[name]
+
+    def __call__(self, outputs, metadata):
+        boxes, raw_scores = outputs
+        boxes = np.squeeze(boxes, 0)
+
+        metadata = metadata.copy()
+        for st in reversed(self.steps):
+            if not st:
+                continue
+            name, _ = list(st.items())[0]
+            meta = metadata.pop()
+            if not self._call_fn(name):
+                continue
+            boxes = self._call_fn(name)(boxes, meta)
+
+        # change xyxy to xywh
+        boxes[:, 2] -= boxes[:, 0]
+        boxes[:, 3] -= boxes[:, 1]
+
+        scores = raw_scores.max(axis=2).flatten()
+        classes = np.argmax(raw_scores, axis=2).flatten()
+        return boxes, scores, classes

@@ -1,3 +1,26 @@
+import json
+
+# fmt: off
+# default coco classes
+COCO_DEFAULT_LABELS = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
+                       "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
+                       "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
+                       "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+                       "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
+                       "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
+                       "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
+                       "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", 
+                       "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
+                       "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"]
+# fmt: on
+
+YOLO_NAS_DEFAULT_PROCESSING_STEPS = [
+    {"DetLongMaxRescale": None},
+    {"CenterPad": {"pad_value": 114}},
+    {"Standardize": {"max_value": 255.0}},
+]
+
+
 class Colors:
     """Ultralytics color palette https://ultralytics.com/"""
 
@@ -20,29 +43,41 @@ class Colors:
 
 
 class Labels:
-    # fmt: off
-    # default coco classes
-    labels = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
-            "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
-            "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
-            "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
-            "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
-            "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-            "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
-            "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", 
-            "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
-            "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"]
-    # fmt: on
     colors = Colors()
 
-    def __init__(self, from_file=None):
-        if from_file:
-            self.labels = self._get_labels_from_file(from_file)
+    def __init__(self, labels):
+        self.labels = labels
 
     def __call__(self, i, use_bgr=False):
         return self.labels[i], self.colors(i, use_bgr)
 
-    def _get_labels_from_file(self, path):
+
+class CustomMetadata:
+    keys = ["type", "original_insz", "iou_tresh", "score_tresh", "prep_steps", "labels"]
+
+    def __init__(self, path):
         with open(path) as f:
-            labels = [x.strip() for x in f.readlines()]
-        return labels
+            data = json.load(f)
+
+        assert (
+            list(data.keys()) == self.keys
+        ), "Different structure metadata file! Please generate file from https://gist.github.com/Hyuto/f3db1c0c2c36308284e101f441c2555f"
+
+        self.type = data["type"]
+        self.original_insz = data["original_insz"]
+        self.iou_tresh = data["iou_tresh"]
+        self.score_tresh = data["score_tresh"]
+        self.prep_steps = data["prep_steps"]
+        self.labels = data["labels"]
+
+
+def log_info(header, body):
+    print("\033[1m\033[94m" + header + ": \033[0m" + body)
+
+
+def log_warning(header, body):
+    print("⚠️ \033[1m\033[93m" + header + ": \033[0m" + body)
+
+
+def log_error(header, body):
+    print("❌ \033[1m\033[91m" + header + ": \033[0m" + body)
