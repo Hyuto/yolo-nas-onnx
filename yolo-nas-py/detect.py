@@ -7,7 +7,7 @@ from yolo_nas.models import load_net
 from yolo_nas.processing import Preprocessing, Postprocessing
 from yolo_nas.draw import draw_box
 from yolo_nas.cli import get_configs
-from yolo_nas.utils import Labels, log_warning, log_info
+from yolo_nas.utils import Labels, VideoWriter, export_image, log_info
 
 
 def detect(net, source, pre_process, post_process, labels):
@@ -16,7 +16,7 @@ def detect(net, source, pre_process, post_process, labels):
     outputs = net.forward(input_)
 
     boxes, scores, classes = post_process(outputs, prep_meta)
-    selected = cv2.dnn.NMSBoxes(boxes, scores, post_process.score_tresh, post_process.iou_tresh)
+    selected = cv2.dnn.NMSBoxes(boxes, scores, post_process.score_thres, post_process.iou_thres)
 
     for i in selected:
         box = boxes[i, :].astype(np.int32).flatten()
@@ -37,8 +37,8 @@ def main(configs):
     pre_process = Preprocessing(configs.processing.prep_steps, (input_height, input_width))
     post_process = Postprocessing(
         configs.processing.prep_steps,
-        configs.processing.iou_tresh,
-        configs.processing.score_tresh,
+        configs.processing.iou_thres,
+        configs.processing.score_thres,
     )
     labels = Labels(configs.net.labels)
 
@@ -46,22 +46,20 @@ def main(configs):
         img = cv2.imread(configs.source.path)
         img = detect(net, img, pre_process, post_process, labels)
 
-        if configs.export:
-            print("🚀", end=" ")
-            log_info("Exporting Image", configs.export)
-            cv2.imwrite(configs.export, img)
-
         name = Path(configs.source.path).stem
         cv2.namedWindow(name, cv2.WINDOW_NORMAL)
+
         cv2.imshow(name, img)
+        export_image(img, configs.export)
         cv2.waitKey(0)
     elif configs.source.type == "video":
         # Video processing
         vid_source = 0 if configs.source.path == "0" else configs.source.path
         cap = cv2.VideoCapture(vid_source)
+        writer = VideoWriter(cap, configs.export)
 
         name = "Webcam" if configs.source.path == "0" else Path(configs.source.path).stem
-        cv2.namedWindow(name, cv2.WINDOW_NORMAL)
+        cv2.namedWindow(name, cv2.WINDOW_AUTOSIZE)
         log_info("Processing video", "press 'q' to exit.")
 
         while cap.isOpened():
@@ -70,13 +68,15 @@ def main(configs):
             if not ret:
                 break
 
-            frame = detect(net, frame, (input_width, input_height), labels)
+            frame = detect(net, frame, pre_process, post_process, labels)
             cv2.imshow(name, frame)
+            writer.write(frame)
 
             if cv2.waitKey(1) == ord("q"):
                 break
 
         cap.release()
+        writer.close()
 
     cv2.destroyAllWindows()
 
