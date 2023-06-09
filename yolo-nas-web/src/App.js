@@ -3,7 +3,7 @@ import cv from "@techstark/opencv-js";
 import { Tensor, InferenceSession } from "onnxruntime-web";
 import Loader from "./components/loader";
 import { detectImage } from "./utils/detect";
-import { download } from "./utils/download";
+import { Configs, download } from "./utils/utils";
 import "./style/App.css";
 
 const App = () => {
@@ -15,24 +15,27 @@ const App = () => {
   const canvasRef = useRef(null);
 
   // configs
-  const modelName = "<YOLO-NAS-MODELS>.onnx";
-  const modelInputShape = [1, 3, 640, 640];
-  const topk = 100;
-  const iouThreshold = 0.45;
-  const scoreThreshold = 0.2;
+  const modelName = "test.onnx";
+  const configs = new Configs(
+    [1, 3, 640, 640], // input shape
+    0.25, // score threshold
+    0.45, // IOU threshold
+    100, // topk
+    "custom-yolo_nas_s-metadata.json" // custom metadata
+  );
 
   // wait until opencv.js initialized
   cv["onRuntimeInitialized"] = async () => {
-    const baseModelURL = `${process.env.PUBLIC_URL}/model`;
+    await configs.init();
 
     // create session
     const arrBufNet = await download(
-      `${baseModelURL}/${modelName}`, // url
+      `${configs.baseModelURL}/${modelName}`, // url
       ["Loading YOLO-NAS model", setLoading] // logger
     ); // get model arraybuffer
     const yoloNAS = await InferenceSession.create(arrBufNet);
     const arrBufNMS = await download(
-      `${baseModelURL}/nms-yolo-nas.onnx`, // url
+      `${configs.baseModelURL}/nms-yolo-nas.onnx`, // url
       ["Loading NMS model", setLoading] // logger
     ); // get nms model arraybuffer
     const nms = await InferenceSession.create(arrBufNMS);
@@ -41,8 +44,8 @@ const App = () => {
     setLoading({ text: "Warming up model...", progress: null });
     const tensor = new Tensor(
       "float32",
-      new Float32Array(modelInputShape.reduce((a, b) => a * b)),
-      modelInputShape
+      new Float32Array(configs.inputShape.reduce((a, b) => a * b)),
+      configs.inputShape
     );
     await yoloNAS.run({ "input.1": tensor });
 
@@ -79,17 +82,17 @@ const App = () => {
               imageRef.current,
               canvasRef.current,
               session,
-              topk,
-              iouThreshold,
-              scoreThreshold,
-              modelInputShape
+              configs.topk,
+              configs.iouThresh,
+              configs.scoreThresh,
+              configs.inputShape
             );
           }}
         />
         <canvas
           id="canvas"
-          width={modelInputShape[2]}
-          height={modelInputShape[3]}
+          width={configs.inputShape[2]}
+          height={configs.inputShape[3]}
           ref={canvasRef}
         />
       </div>

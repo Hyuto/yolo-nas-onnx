@@ -1,6 +1,7 @@
 import cv from "@techstark/opencv-js";
 import { Tensor } from "onnxruntime-web";
 import { renderBoxes } from "./renderBox";
+import { PreProcessing } from "./processing";
 
 /**
  * Detect Image
@@ -35,7 +36,11 @@ export const detectImage = async (
   ); // nms config tensor
   const outNames = session.net.outputNames;
   const output = await session.net.run({ "input.1": tensor }); // run session and get output layer
-  const { selected } = await session.nms.run({ bboxes: output[outNames[0]], scores: output[outNames[1]], config: config }); // perform nms and filter boxes
+  const { selected } = await session.nms.run({
+    bboxes: output[outNames[0]],
+    scores: output[outNames[1]],
+    config: config,
+  }); // perform nms and filter boxes
 
   const boxes = [];
 
@@ -73,32 +78,40 @@ export const detectImage = async (
  * @return preprocessed image and configs
  */
 const preprocessing = (source, modelWidth, modelHeight) => {
-  const mat = cv.imread(source); // read from img tag
-  const matC3 = new cv.Mat(mat.rows, mat.cols, cv.CV_8UC3); // new image matrix
-  cv.cvtColor(mat, matC3, cv.COLOR_RGBA2BGR); // RGBA to BGR
+  try {
+    const test = new PreProcessing([], [640, 640]);
+    const mat = cv.imread(source); // read from img tag
+    const matC3 = new cv.Mat(mat.rows, mat.cols, cv.CV_32FC3); // new image matrix
+    cv.cvtColor(mat, matC3, cv.COLOR_RGBA2BGR); // RGBA to BGR
+    const testMat = new cv.Mat();
+    test._normalize(matC3, testMat, [123.675, 116.28, 103.53], [58.395, 57.12, 57.375]);
+    console.log(testMat.data32F);
 
-  // padding image to [n x n] dim
-  const maxSize = Math.max(matC3.rows, matC3.cols); // get max size from width and height
-  const xPad = maxSize - matC3.cols, // set xPadding
-    xRatio = maxSize / matC3.cols; // set xRatio
-  const yPad = maxSize - matC3.rows, // set yPadding
-    yRatio = maxSize / matC3.rows; // set yRatio
-  const matPad = new cv.Mat(); // new mat for padded image
-  cv.copyMakeBorder(matC3, matPad, 0, yPad, 0, xPad, cv.BORDER_CONSTANT); // padding black
+    // padding image to [n x n] dim
+    const maxSize = Math.max(matC3.rows, matC3.cols); // get max size from width and height
+    const xPad = maxSize - matC3.cols, // set xPadding
+      xRatio = maxSize / matC3.cols; // set xRatio
+    const yPad = maxSize - matC3.rows, // set yPadding
+      yRatio = maxSize / matC3.rows; // set yRatio
+    const matPad = new cv.Mat(); // new mat for padded image
+    cv.copyMakeBorder(matC3, matPad, 0, yPad, 0, xPad, cv.BORDER_CONSTANT); // padding black
 
-  const input = cv.blobFromImage(
-    matPad,
-    1 / 255.0, // normalize
-    new cv.Size(modelWidth, modelHeight), // resize to model input size
-    new cv.Scalar(0, 0, 0),
-    true, // swapRB
-    false // crop
-  ); // preprocessing image matrix
+    const input = cv.blobFromImage(
+      matPad,
+      1 / 255.0, // normalize
+      new cv.Size(modelWidth, modelHeight), // resize to model input size
+      new cv.Scalar(0, 0, 0),
+      true, // swapRB
+      false // crop
+    ); // preprocessing image matrix
 
-  // release mat opencv
-  mat.delete();
-  matC3.delete();
-  matPad.delete();
+    // release mat opencv
+    mat.delete();
+    matC3.delete();
+    matPad.delete();
 
-  return [input, xRatio, yRatio];
+    return [input, xRatio, yRatio];
+  } catch (e) {
+    console.log(cv.exceptionFromPtr(e).msg);
+  }
 };
