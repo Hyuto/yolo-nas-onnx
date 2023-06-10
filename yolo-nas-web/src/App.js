@@ -17,13 +17,13 @@ const App = () => {
   const canvasRef = useRef(null);
 
   // configs
-  const modelName = "yolo_nas_s.onnx";
+  const modelName = "<YOLO-NAS-MODELS>.onnx";
   const configs = new Configs(
     [1, 3, 640, 640], // input shape
     0.25, // score threshold
     0.45, // IOU threshold
     100 // topk
-    //"custom-yolo_nas_s-metadata.json" // custom metadata
+    // custom metadata
   );
 
   // wait until opencv.js initialized

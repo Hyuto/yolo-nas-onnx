@@ -21,11 +21,13 @@ export class Configs {
     const res = await fetch(`${this.baseModelURL}/${this.customMetadata}`);
     const metadata = await res.json();
 
-    this.inputShape = metadata["original_insz"];
     this.scoreThresh = metadata["score_thres"];
     this.iouThresh = metadata["iou_thres"];
     this.prepSteps = metadata["prep_steps"];
     this.labels = metadata["labels"];
+
+    if (JSON.stringify(this.inputShape) !== JSON.stringify(metadata["original_insz"]))
+      alert("Model have different input shape from what included in metadata!");
   }
 
   async init() {

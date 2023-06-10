@@ -27,18 +27,36 @@ yarn install # Install dependencies
    ```jsx
    ...
    // configs
-   const modelName = "<YOLO-NAS-MODELS>.onnx"; // change to new model name
-   const modelInputShape = [1, 3, 640, 640];
-   const topk = 100;
-   const iouThreshold = 0.4;
-   const scoreThreshold = 0.2;
+   const modelName = "<YOLO-NAS-MODELS>.onnx";
+   const configs = new Configs(
+    [1, 3, 640, 640], // input shape
+    0.25, // score threshold
+    0.45, // IOU threshold
+    100 // topk
+    // custom metadata
+   );
    ...
    ```
 3. Done! 😊
 
-**Note: Custom Trained YOLO-NAS Models**
+### Custom Trained YOLO-NAS Models
 
-Please update `src/utils/labels.json` with your custom YOLO-NAS classes.
+1. Copy custom model metadata generated from [custom-nas-model-metadata.py](https://gist.github.com/Hyuto/f3db1c0c2c36308284e101f441c2555f) to `./public/model`, please follow [these steps](https://github.com/Hyuto/yolo-nas-onnx/tree/master/yolo-nas-py#custom-model) to generate metadata file using that script.
+2. Update `modelName` and add custom-metadata args in configs at `App.jsx`
+   ```jsx
+   ...
+   // configs
+   const modelName = "<CUSTOM-TRAINED-YOLO-NAS-MODELS>.onnx";
+   const configs = new Configs(
+    [1, 3, 640, 640], // input shape
+    0.25, // score threshold
+    0.45, // IOU threshold
+    100, // topk
+    "<CUSTOM-TRAINED-YOLO-NAS-MODELS-METADATA>.json" // custom metadata
+   );
+   ...
+   ```
+3. Done! 😊
 
 ## Scripts
 
