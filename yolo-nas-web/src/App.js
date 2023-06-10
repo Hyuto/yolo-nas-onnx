@@ -4,29 +4,43 @@ import { Tensor, InferenceSession } from "onnxruntime-web";
 import Loader from "./components/loader";
 import { detectImage } from "./utils/detect";
 import { Configs, download } from "./utils/utils";
+import { PreProcessing, PostProcessing } from "./utils/processing";
 import "./style/App.css";
 
 const App = () => {
-  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState({ text: "Loading OpenCV.js", progress: null });
+  const [session, setSession] = useState(null);
+  const [processing, setProcessing] = useState(null);
   const [image, setImage] = useState(null);
   const inputImage = useRef(null);
   const imageRef = useRef(null);
   const canvasRef = useRef(null);
 
   // configs
-  const modelName = "test.onnx";
+  const modelName = "yolo_nas_s.onnx";
   const configs = new Configs(
     [1, 3, 640, 640], // input shape
     0.25, // score threshold
     0.45, // IOU threshold
-    100, // topk
-    "custom-yolo_nas_s-metadata.json" // custom metadata
+    100 // topk
+    //"custom-yolo_nas_s-metadata.json" // custom metadata
   );
 
   // wait until opencv.js initialized
   cv["onRuntimeInitialized"] = async () => {
     await configs.init();
+    const prep = new PreProcessing(configs.prepSteps, [
+      configs.inputShape[3],
+      configs.inputShape[2],
+    ]);
+    const postp = new PostProcessing(
+      configs.prepSteps,
+      configs.iouThresh,
+      configs.scoreThresh,
+      configs.topk,
+      configs.labels
+    );
+    setProcessing({ preProcessing: prep, postProcessing: postp });
 
     // create session
     const arrBufNet = await download(
@@ -49,7 +63,7 @@ const App = () => {
     );
     await yoloNAS.run({ "input.1": tensor });
 
-    setSession({ net: yoloNAS, nms: nms });
+    setSession({ net: yoloNAS, inputShape: configs.inputShape, nms: nms });
     setLoading(null);
   };
 
@@ -78,23 +92,10 @@ const App = () => {
           alt=""
           style={{ display: image ? "block" : "none" }}
           onLoad={() => {
-            detectImage(
-              imageRef.current,
-              canvasRef.current,
-              session,
-              configs.topk,
-              configs.iouThresh,
-              configs.scoreThresh,
-              configs.inputShape
-            );
+            detectImage(imageRef.current, canvasRef.current, session, processing);
           }}
         />
-        <canvas
-          id="canvas"
-          width={configs.inputShape[2]}
-          height={configs.inputShape[3]}
-          ref={canvasRef}
-        />
+        <canvas id="canvas" ref={canvasRef} />
       </div>
 
       <input

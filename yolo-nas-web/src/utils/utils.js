@@ -1,5 +1,13 @@
+import COCO_LABELS from "./labels.json";
+
 export class Configs {
   baseModelURL = `${process.env.PUBLIC_URL}/model`;
+  prepSteps = [
+    { DetLongMaxRescale: null },
+    { CenterPad: { pad_value: 114 } },
+    { Standardize: { max_value: 255.0 } },
+  ]; // default YOLO-NAS preprocessing steps
+  labels = COCO_LABELS;
 
   constructor(inputShape, scoreThresh, iouThresh, topk, customMetadata = null) {
     this.inputShape = inputShape;
@@ -11,15 +19,17 @@ export class Configs {
 
   async _loadMetadata() {
     const res = await fetch(`${this.baseModelURL}/${this.customMetadata}`);
-    this.metadata = await res.json();
+    const metadata = await res.json();
 
-    this.inputShape = this.metadata["original_insz"];
-    this.scoreThresh = this.metadata["score_thres"];
-    this.iouThresh = this.metadata["iou_thres"];
+    this.inputShape = metadata["original_insz"];
+    this.scoreThresh = metadata["score_thres"];
+    this.iouThresh = metadata["iou_thres"];
+    this.prepSteps = metadata["prep_steps"];
+    this.labels = metadata["labels"];
   }
 
-  init() {
-    if (this.customMetadata) this._loadMetadata();
+  async init() {
+    if (this.customMetadata) await this._loadMetadata();
   }
 }
 
