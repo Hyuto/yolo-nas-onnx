@@ -1,4 +1,4 @@
-# YOLO-NAS with Python
+# YOLO-NAS ONNX with Python
 
 <p align="center">
     <img src="../assets/sample-1.jpg" alt="sample" />
@@ -17,7 +17,7 @@ python detect.py -m <YOLO-NAS-ONNX-MODEL-PATH> -i <IMAGE-INPUT-PATH>
 **Inference on Video**
 
 <p align="center">
-    <video src="../assets/sample-vid-1.mp4" />
+    <video src="../assets/sample-vid-1.mp4"></video>
 </p>
 
 ```bash
@@ -26,23 +26,14 @@ python detect.py -m <YOLO-NAS-ONNX-MODEL-PATH> -v <VIDEO-INPUT-PATH>
 
 Note: you can pass `0` on `VIDEO-INPUT-PATH` to direct processing from webcam.
 
-## Custom Model
+## Custom Trained YOLO-NAS Models
 
 Run custom trained YOLO-NAS model.
 
 1. Generate custom model metadata.
 
-   Generate custom model metadata to provide additional information. Use [custom-nas-model-metadata.py](https://gist.github.com/Hyuto/f3db1c0c2c36308284e101f441c2555f) to generate metadata from torch model.
-
-   **Usage**
-
-   ```bash
-   python custom-nas-model-metadata.py -m <CHECKPOINT-PATH> \ # Custom trained YOLO-NAS checkpoint path
-                                          -t <MODEL-TYPE> \ # Custom trained YOLO-NAS model type
-                                          -n <NUM-CLASSES> # Number of classes
-   ```
-
-   After running that it'll generate metadata (json formated) for you
+   Generate custom model metadata to provide additional information from torch model.
+   Please follow these steps to generate it [Generate Custom Metadata](https://github.com/Hyuto/yolo-nas-onnx#custom-model).
 
 2. Do inferencing with `detect.py`
 
