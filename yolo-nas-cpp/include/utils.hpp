@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <opencv2/opencv.hpp>
 
 std::string LogInfo(std::string header, std::string body);
 
@@ -20,3 +21,16 @@ const std::vector<std::string> COCO_LABELS{"person", "bicycle", "car", "motorcyc
                                            "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse",
                                            "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
                                            "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"};
+
+class VideoExporter
+{
+private:
+    cv::VideoWriter writer;
+
+public:
+    std::string exportPath;
+
+    VideoExporter(cv::VideoCapture &cap, std::string path);
+    void write(cv::Mat &frame);
+    void close();
+};

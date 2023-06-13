@@ -1,6 +1,15 @@
 #include <argparse/argparse.hpp>
+#include <fstream>
 #include "utils.hpp"
 #include "cli.hpp"
+
+json YOLO_NAS_DEFAULT_PROCESSING_STEPS = json::parse(R"(
+    [
+        {"DetLongMaxRescale": null},
+        {"CenterPad": {"pad_value": 114}},
+        {"Standardize": {"max_value": 255.0}}
+    ]
+)");
 
 Config parseCLI(int argc, char **argv)
 {
@@ -8,8 +17,8 @@ Config parseCLI(int argc, char **argv)
     program.add_description("Detect using YOLO-NAS model");
 
     program.add_argument("model").help("Path to the YOLO-NAS ONNX model.").metavar("MODEL");
-    program.add_argument("-i", "--image").help("Path to the image source").metavar("IMAGE");
-    program.add_argument("-v", "--video").help("Path to the video source").metavar("VIDEO");
+    program.add_argument("-I", "--image").help("Path to the image source").metavar("IMAGE");
+    program.add_argument("-V", "--video").help("Path to the video source").metavar("VIDEO");
 
     program.add_argument("--imgsz")
         .help("Model input size")
@@ -29,6 +38,11 @@ Config parseCLI(int argc, char **argv)
         .help("Float representing the threshold for deciding whether boxes overlap too much with respect to IOU")
         .scan<'g', float>();
 
+    program.add_argument("--export")
+        .help("Export to a file (path with extension | mp4 is a must for video)");
+    program.add_argument("--custom-metadata")
+        .help("Path to metadata file (Generated from https://gist.github.com/Hyuto/f3db1c0c2c36308284e101f441c2555f)");
+
     try
     {
         program.parse_args(argc, argv);
@@ -45,48 +59,74 @@ Config parseCLI(int argc, char **argv)
     float scoreTresh = program.get<float>("--score-tresh"),
           iouTresh = program.get<float>("--iou-tresh");
     std::vector<int> imgSize = program.get<std::vector<int>>("--imgsz");
-    auto imgPath = program.present("-i"),
-         vidPath = program.present("-v");
+    auto imgPath = program.present("-I"),
+         vidPath = program.present("-V"),
+         customMetadata = program.present("--custom-metadata"),
+         exportArgs = program.present("--export");
 
-    exists(netPath);
     if (imgPath && vidPath)
     {
         std::cerr << LogError("Double Entry", "Please specify either image or video source!") << std::endl;
         std::abort();
     }
-    if (!(imgPath || vidPath))
+    else if (!(imgPath || vidPath))
     {
         std::cerr << LogError("No Entry", "Please input either image or video source!") << std::endl;
         std::abort();
     }
-    if (imgSize.size() == 1)
-        imgSize.push_back(imgSize[0]);
 
-    Source type;
-    std::string source;
+    Source source;
     if (imgPath)
     {
         exists(imgPath.value());
-        type = IMAGE;
-        source = imgPath.value();
+        source.type = IMAGE;
+        source.path = imgPath.value();
     }
     else if (vidPath)
     {
         exists(vidPath.value());
-        type = VIDEO;
-        source = vidPath.value();
+        source.type = VIDEO;
+        source.path = vidPath.value();
     }
 
-    Config configurations{netPath, type, source, imgSize, useGPU, scoreTresh, iouTresh};
+    if (imgSize.size() == 1)
+        imgSize.push_back(imgSize[0]);
 
-    std::string emoji = configurations.type == IMAGE ? "🖼️" : "📷";
-    std::cout << emoji + LogInfo(" Detect", "model=" + configurations.netPath);
-    std::cout << " source=" + configurations.source;
+    exists(netPath);
+    Net net{netPath, useGPU, COCO_LABELS};
+    Processing processing{imgSize, YOLO_NAS_DEFAULT_PROCESSING_STEPS, scoreTresh, iouTresh};
+
+    if (customMetadata)
+    {
+        exists(customMetadata.value());
+
+        /* std::ifstream f(customMetadata.value());
+        json data = json::parse(f);
+
+        for (auto x : data["prep_steps"])
+        {
+            if (!x.is_null())
+                std::cout << x.dump(4) << std::endl;
+        } */
+    }
+
+    std::string exportPath = exportArgs ? exportArgs.value() : "";
+
+    Config configurations{net, source, processing, exportPath};
+
+    std::string emoji = configurations.source.type == IMAGE ? "🖼️" : "📷";
+    std::cout << emoji + LogInfo(" Detect", "model=" + configurations.net.path);
+    std::cout << " source=" + configurations.source.path;
     std::cout << " imgsz="
-              << "[" << configurations.imgSize[0] << "," << configurations.imgSize[1] << "]";
-    std::cout << " gpu=" << (configurations.gpu ? "true" : "false");
-    std::cout << " score-tresh=" << configurations.scoreTresh;
-    std::cout << " iou-tresh=" << configurations.iouTresh << std::endl;
+              << "[" << configurations.processing.inputShape[0] << "," << configurations.processing.inputShape[1] << "]";
+    std::cout << " gpu=" << (configurations.net.gpu ? "true" : "false");
+    std::cout << " score-tresh=" << configurations.processing.scoreThresh;
+    std::cout << " iou-tresh=" << configurations.processing.iouThresh;
+    if (customMetadata)
+        std::cout << " custom-metadata=" << customMetadata.value();
+    if (exportArgs)
+        std::cout << " export=" << exportPath;
+    std::cout << std::endl;
 
     return configurations;
 }
