@@ -1,13 +1,8 @@
-# YOLO-NAS with onnxruntime-web
+# YOLO-NAS ONNX with JavaScript
 
 <p align="center">
   <img src="./sample.png" />
 </p>
-
-![love](https://img.shields.io/badge/Made%20with-🖤-white)
-![react](https://img.shields.io/badge/React-blue?logo=react)
-![onnxruntime-web](https://img.shields.io/badge/onnxruntime--web-white?logo=onnx&logoColor=black)
-![opencv.js](https://img.shields.io/badge/opencv.js-green?logo=opencv)
 
 ---
 
@@ -27,18 +22,41 @@ yarn install # Install dependencies
    ```jsx
    ...
    // configs
-   const modelName = "<YOLO-NAS-MODELS>.onnx"; // change to new model name
-   const modelInputShape = [1, 3, 640, 640];
-   const topk = 100;
-   const iouThreshold = 0.4;
-   const scoreThreshold = 0.2;
+   const modelName = "<YOLO-NAS-MODELS>.onnx";
+   const configs = new Configs(
+    [1, 3, 640, 640], // input shape
+    0.25, // score threshold
+    0.45, // IOU threshold
+    100 // topk
+    // custom metadata
+   );
    ...
    ```
 3. Done! 😊
 
-**Note: Custom Trained YOLO-NAS Models**
+### Custom Trained YOLO-NAS Models
 
-Please update `src/utils/labels.json` with your custom YOLO-NAS classes.
+1. Generate custom model metadata.
+
+   Generate custom model metadata to provide additional information from torch model.
+   Please follow these steps to generate it [Generate Custom Metadata](https://github.com/Hyuto/yolo-nas-onnx#custom-model).
+
+2. Copy YOLO-NAS ONNX model and the generated `json` metadata to `./public/model`
+3. Update `modelName` and add custom-metadata args in configs at `App.jsx`
+   ```jsx
+   ...
+   // configs
+   const modelName = "<CUSTOM-TRAINED-YOLO-NAS-MODELS>.onnx";
+   const configs = new Configs(
+    [1, 3, 640, 640], // input shape
+    0.25, // score threshold
+    0.45, // IOU threshold
+    100, // topk
+    "<CUSTOM-TRAINED-YOLO-NAS-MODELS-METADATA>.json" // custom metadata
+   );
+   ...
+   ```
+4. Done! 😊
 
 ## Scripts
 

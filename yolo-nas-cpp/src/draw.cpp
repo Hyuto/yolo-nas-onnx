@@ -3,8 +3,22 @@
 
 #include "utils.hpp"
 
+void check_boxes(cv::Mat &source, cv::Rect &box)
+{
+    if (box.x < 0)
+        box.x = 0;
+    if (box.y < 0)
+        box.y = 0;
+    if (box.x + box.width > source.cols)
+        box.width = source.cols - box.x;
+    if (box.y + box.height > source.rows)
+        box.height = source.rows - box.y;
+}
+
 void draw_box(cv::Mat &source, cv::Rect &box, int &label, float &score, cv::Scalar color, float alpha = 0.25)
 {
+    check_boxes(source, box); // check overflow boxes
+
     // Fill box
     cv::Mat cropBox = source(box);
     cv::Mat colorBox = cv::Mat::ones(cropBox.rows, cropBox.cols, CV_8UC3);

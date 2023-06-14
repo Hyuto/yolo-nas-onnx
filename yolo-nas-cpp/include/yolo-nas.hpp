@@ -6,6 +6,12 @@
 
 #include "draw.hpp"
 
+struct PreprocessingMetadata
+{
+    float scaleFactor;
+    std::vector<int> padding;
+};
+
 class YoloNAS
 {
 private:
@@ -19,12 +25,12 @@ public:
     cv::dnn::Net net;
     std::vector<int> imgSize;
     YoloNAS(std::string netPath, std::vector<int> imgsz, bool cuda, float scoreTresh, float iouTresh);
-    void preprocess(cv::Mat &source, cv::Mat &dst, std::vector<float> &ratios);
+    PreprocessingMetadata preprocess(cv::Mat &source, cv::Mat &dst);
     void postprocess(std::vector<std::vector<cv::Mat>> &out,
                      std::vector<cv::Rect> &boxes,
                      std::vector<int> &labels,
                      std::vector<float> &scores,
                      std::vector<int> &selectedIDX,
-                     std::vector<float> &ratios);
+                     PreprocessingMetadata &scaleFactor);
     void predict(cv::Mat &img);
 };

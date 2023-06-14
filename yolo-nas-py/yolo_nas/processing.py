@@ -1,20 +1,44 @@
+# Inspired from: https://github.com/Deci-AI/super-gradients/blob/3.1.1/src/super_gradients/training/processing/processing.py
+
 import numpy as np
 import cv2
 
+YOLO_NAS_DEFAULT_PROCESSING_STEPS = [
+    {"DetLongMaxRescale": None},
+    {"CenterPad": {"pad_value": 114}},
+    {"Standardize": {"max_value": 255.0}},
+]
+
 
 class Preprocessing:
+    """Preprocessing Handler
+
+    Args:
+        steps (List[Dict]): Preprocessing steps, list of dictionary contains name and args.
+        out_shape (Tuple[int]): image out shapes [h, w].
+
+    Examples:
+        Simple preprocessing image
+
+        >>> prep = Preprocessing([{"DetLongMaxRescale": None}])
+        >>> prep(img)
+    """
+
     def __init__(self, steps, out_shape):
         self.steps = steps
         self.out_shape = out_shape
 
     @staticmethod
     def __rescale_img(img, out_shape):
+        """rescale func"""
         return cv2.resize(img, dsize=out_shape, interpolation=cv2.INTER_LINEAR).astype(np.uint8)
 
     def _standarize(self, img, max_value):
+        """standarize img based on max value"""
         return (img / max_value).astype(np.float32), None
 
     def _det_rescale(self, img):
+        """Rescale image to output based with scale factors"""
         scale_factor_h, scale_factor_w = (
             self.out_shape[0] / img.shape[0],
             self.out_shape[1] / img.shape[1],
@@ -24,6 +48,7 @@ class Preprocessing:
         }
 
     def _det_long_max_rescale(self, img):
+        """Rescale image to output based on max size"""
         height, width = img.shape[:2]
         scale_factor = min((self.out_shape[1] - 4) / height, (self.out_shape[0] - 4) / width)
 
@@ -34,12 +59,14 @@ class Preprocessing:
         return img, {"scale_factors": (scale_factor, scale_factor)}
 
     def _bot_right_pad(self, img, pad_value):
+        """Pad bottom and right only (palce image on top left)"""
         pad_height, pad_width = self.out_shape[1] - img.shape[0], self.out_shape[0] - img.shape[1]
         return cv2.copyMakeBorder(
             img, 0, pad_height, 0, pad_width, cv2.BORDER_CONSTANT, value=[pad_value] * img.shape[-1]
         ), {"padding": (0, pad_height, 0, pad_width)}
 
     def _center_pad(self, img, pad_value):
+        """Pad center (palce image on center)"""
         pad_height, pad_width = self.out_shape[1] - img.shape[0], self.out_shape[0] - img.shape[1]
         pad_top, pad_left = pad_height // 2, pad_width // 2
         return cv2.copyMakeBorder(
@@ -53,9 +80,11 @@ class Preprocessing:
         ), {"padding": (pad_top, pad_height - pad_top, pad_left, pad_width - pad_left)}
 
     def _normalize(self, img, mean, std):
+        """Normalize image based on mean and stdev"""
         return (img - np.asarray(mean)) / np.asarray(std), None
 
     def _call_fn(self, name):
+        """Call prep func from string name"""
         mapper = {
             "Standardize": self._standarize,
             "DetRescale": self._det_rescale,
@@ -67,10 +96,11 @@ class Preprocessing:
         return mapper[name]
 
     def __call__(self, img):
+        """Do all preprocessing steps on single image"""
         img = img.copy()
         metadata = []
         for st in self.steps:
-            if not st:
+            if not st:  # if steps isn't None
                 continue
             name, kwargs = list(st.items())[0]
             img, meta = self._call_fn(name)(img, **kwargs) if kwargs else self._call_fn(name)(img)
@@ -81,24 +111,41 @@ class Preprocessing:
 
 
 class Postprocessing:
-    def __init__(self, steps, iou_tresh, score_tresh):
+    """Postprocessing Handler
+
+    Args:
+        steps (List[Dict]): Preprocessing steps, list of dictionary contains name and args.
+        iou_thres (float): Float representing NMS/IOU threshold.
+        score_thres (float): image out shapes [h, w].
+
+    Examples:
+        Postprocessing outputs (boxes, scores)
+
+        >>> postp = Postprocessing([{"DetLongMaxRescale": None}], o.45, 0.25)
+        >>> prep(output, prep_metadata)
+    """
+
+    def __init__(self, steps, iou_thres, score_thres):
         self.steps = steps
-        self.iou_tresh = iou_tresh
-        self.score_tresh = score_tresh
+        self.iou_thres = iou_thres
+        self.score_thres = score_thres
 
     def _rescale_boxes(self, boxes, metadata):
+        """Rescale boxes to original image size"""
         scale_factors_w, scale_factors_h = metadata["scale_factors"]
         boxes[:, [0, 2]] /= scale_factors_w
         boxes[:, [1, 3]] /= scale_factors_h
         return boxes
 
     def _shift_bboxes(self, boxes, metadata):
+        """Shift boxes because of padding"""
         pad_top, _, pad_left, _ = metadata["padding"]
         boxes[:, [0, 2]] -= pad_left
         boxes[:, [1, 3]] -= pad_top
         return boxes
 
     def _call_fn(self, name):
+        """Call postp func from string name"""
         mapper = {
             "DetRescale": self._rescale_boxes,
             "DetLongMaxRescale": self._rescale_boxes,
@@ -110,6 +157,7 @@ class Postprocessing:
         return mapper[name]
 
     def __call__(self, outputs, metadata):
+        """Do all preprocessing steps on single output"""
         boxes, raw_scores = outputs
         boxes = np.squeeze(boxes, 0)
 

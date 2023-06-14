@@ -31,6 +31,7 @@ class ORT_LOADER:
         self.output_names = [x.name for x in self.net.get_outputs()]  # get output info
 
     def assert_input_shape(self, input_shape=None):
+        """check input shape"""
         if input_shape:
             if input_shape != self.input_shape:
                 log_warning(

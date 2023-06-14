@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import Loader from "./components/loader";
 import "./style/index.css";
 
-const onDev = false;
+const onDev = process.env.NODE_ENV === "development";
 const App = lazy(() => import("./App"));
 
 const Main = () => {

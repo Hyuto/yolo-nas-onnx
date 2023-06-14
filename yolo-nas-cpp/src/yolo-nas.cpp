@@ -44,20 +44,32 @@ void YoloNAS::warmup(int round)
     out[1][0].release();
 }
 
-void YoloNAS::preprocess(cv::Mat &source, cv::Mat &dst, std::vector<float> &ratios)
+PreprocessingMetadata YoloNAS::preprocess(cv::Mat &source, cv::Mat &dst)
 {
+    float height = (float)source.rows,
+          width = (float)source.cols;
+    float scaleFactor = std::min((float)(netInputShape[2] - 4) / height, (float)(netInputShape[3] - 4) / width);
+
+    if (scaleFactor != 1.0f)
+    {
+        int new_height = (int)std::round(height * scaleFactor),
+            new_width = (int)std::round(width * scaleFactor);
+        cv::resize(source, dst, cv::Size(new_width, new_height), 0, 0, cv::INTER_LINEAR);
+    }
+
     // padding image to [n x n] dim
-    int maxSize = std::max(source.cols, source.rows);
-    int xPad = maxSize - source.cols,
-        yPad = maxSize - source.rows;
-    float xRatio = (float)maxSize / (float)netInputShape[3],
-          yRatio = (float)maxSize / (float)netInputShape[2];
-    cv::copyMakeBorder(source, dst, 0, yPad, 0, xPad, cv::BORDER_CONSTANT); // padding black
+    int xPad = netInputShape[3] - dst.cols,
+        yPad = netInputShape[2] - dst.rows;
+    int padTop = (int)std::floor(yPad / 2),
+        padLeft = (int)std::floor(xPad / 2);
+    std::vector<int> padding{padTop, yPad - padTop, padLeft, xPad - padLeft};
+    cv::copyMakeBorder(dst, dst, padding[0], padding[1], padding[2], padding[3], cv::BORDER_CONSTANT, cv::Scalar(114, 114, 114)); // padding black
 
-    dst = cv::dnn::blobFromImage(dst, 1.0f / 255.0f, cv::Size(netInputShape[3], netInputShape[2]), cv::Scalar(), true);
+    dst.convertTo(dst, CV_32F, 1 / 255.0);
+    dst = cv::dnn::blobFromImage(dst, 1, cv::Size(), cv::Scalar(), true, false);
 
-    ratios.push_back(xRatio);
-    ratios.push_back(yRatio);
+    PreprocessingMetadata metadata{scaleFactor, padding};
+    return metadata;
 }
 
 void YoloNAS::postprocess(std::vector<std::vector<cv::Mat>> &out,
@@ -65,7 +77,7 @@ void YoloNAS::postprocess(std::vector<std::vector<cv::Mat>> &out,
                           std::vector<int> &labels,
                           std::vector<float> &scores,
                           std::vector<int> &selectedIDX,
-                          std::vector<float> &ratios)
+                          PreprocessingMetadata &metadata)
 {
     cv::Mat &rawScores = out[0][0],
             &bboxes = out[1][0];
@@ -83,10 +95,10 @@ void YoloNAS::postprocess(std::vector<std::vector<cv::Mat>> &out,
         if ((float)maxScore < scoreTresh)
             continue;
 
-        int x = (int)(bboxes.at<float>(i, 0) * ratios[0]),
-            y = (int)(bboxes.at<float>(i, 1) * ratios[1]),
-            x1 = (int)(bboxes.at<float>(i, 2) * ratios[0]),
-            y1 = (int)(bboxes.at<float>(i, 3) * ratios[1]);
+        int x = (int)((bboxes.at<float>(i, 0) - (float)metadata.padding[2]) / metadata.scaleFactor),
+            y = (int)((bboxes.at<float>(i, 1) - (float)metadata.padding[0]) / metadata.scaleFactor),
+            x1 = (int)((bboxes.at<float>(i, 2) - (float)metadata.padding[2]) / metadata.scaleFactor),
+            y1 = (int)((bboxes.at<float>(i, 3) - (float)metadata.padding[0]) / metadata.scaleFactor);
         int w = x1 - x,
             h = y1 - y;
 
@@ -104,20 +116,18 @@ void YoloNAS::postprocess(std::vector<std::vector<cv::Mat>> &out,
 void YoloNAS::predict(cv::Mat &img)
 {
     cv::Mat imgInput;
-    std::vector<float> ratios;
-    preprocess(img, imgInput, ratios);
+    PreprocessingMetadata metadata = preprocess(img, imgInput);
 
     std::vector<std::vector<cv::Mat>> out;
     net.setInput(imgInput);
     net.forward(out, net.getUnconnectedOutLayersNames());
     imgInput.release();
 
-    std::vector<int> labels;
     std::vector<float> scores;
     std::vector<cv::Rect> boxes;
-    std::vector<int> selectedIDX;
+    std::vector<int> labels, selectedIDX;
 
-    postprocess(out, boxes, labels, scores, selectedIDX, ratios);
+    postprocess(out, boxes, labels, scores, selectedIDX, metadata);
 
     for (int x : selectedIDX)
     {

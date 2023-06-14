@@ -1,14 +1,9 @@
-import labels from "./labels.json";
-
 /**
  * Render prediction boxes
  * @param {HTMLCanvasElement} canvas canvas tag reference
  * @param {Array[Object]} boxes boxes array
  */
-export const renderBoxes = (canvas, boxes) => {
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // clean canvas
-
+export const renderBoxes = (ctx, boxes, labels) => {
   const colors = new Colors();
 
   // font configs

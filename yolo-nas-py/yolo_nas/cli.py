@@ -3,11 +3,12 @@ import os
 
 from collections import namedtuple
 
-from .utils import log_info, CustomMetadata, COCO_DEFAULT_LABELS, YOLO_NAS_DEFAULT_PROCESSING_STEPS
+from .processing import YOLO_NAS_DEFAULT_PROCESSING_STEPS
+from .utils import log_info, CustomMetadata, COCO_DEFAULT_LABELS
 
 Source = namedtuple("Source", "type path")
 Net = namedtuple("Source", "path gpu dnn labels")
-Processing = namedtuple("Source", "input_shape prep_steps score_tresh iou_tresh")
+Processing = namedtuple("Source", "input_shape prep_steps score_thres iou_thres")
 Configs = namedtuple("Configs", "net source processing export")
 
 
@@ -25,12 +26,12 @@ def get_configs():
         help="Use GPU if available",
     )
     parser.add_argument(
-        "--score-tresh",
+        "--score-thres",
         type=float,
         help="Float representing the threshold for deciding when to remove boxes",
     )
     parser.add_argument(
-        "--iou-tresh",
+        "--iou-thres",
         type=float,
         help="Float representing the threshold for deciding whether boxes overlap too much with respect to IOU",
     )
@@ -44,7 +45,11 @@ def get_configs():
         type=str,
         help="Path to metadata file (Generated from https://gist.github.com/Hyuto/f3db1c0c2c36308284e101f441c2555f)",
     )
-    parser.add_argument("--export", type=str, help="Export to a file (path with extension)")
+    parser.add_argument(
+        "--export",
+        type=str,
+        help="Export to a file (path with extension | mp4 is a must for video)",
+    )
 
     opt = parser.parse_args()  # parsing args
 
@@ -72,24 +77,24 @@ def get_configs():
 
     metadata = CustomMetadata(opt.custom_metadata) if opt.custom_metadata else None
     if metadata:
-        if not opt.score_tresh:
-            opt.score_tresh = metadata.score_tresh
-        if not opt.iou_tresh:
-            opt.iou_tresh = metadata.iou_tresh
+        if not opt.score_thres:
+            opt.score_thres = metadata.score_thres
+        if not opt.iou_thres:
+            opt.iou_thres = metadata.iou_thres
 
     # default val
-    if not opt.score_tresh:
-        opt.score_tresh = 0.25
-    if not opt.iou_tresh:
-        opt.iou_tresh = 0.45
+    if not opt.score_thres:
+        opt.score_thres = 0.25
+    if not opt.iou_thres:
+        opt.iou_thres = 0.45
 
     source = Source("image" if opt.image else "video", opt.image if opt.image else opt.video)
     net = Net(opt.model, opt.gpu, opt.dnn, metadata.labels if metadata else COCO_DEFAULT_LABELS)
     processing = Processing(
         metadata.original_insz if metadata else None,
         metadata.prep_steps if metadata else YOLO_NAS_DEFAULT_PROCESSING_STEPS,
-        opt.score_tresh,
-        opt.iou_tresh,
+        opt.score_thres,
+        opt.iou_thres,
     )
 
     # logging

@@ -1,5 +1,7 @@
 import json
 
+import cv2
+
 # fmt: off
 # default coco classes
 COCO_DEFAULT_LABELS = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
@@ -13,12 +15,6 @@ COCO_DEFAULT_LABELS = ["person", "bicycle", "car", "motorcycle", "airplane", "bu
                        "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
                        "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"]
 # fmt: on
-
-YOLO_NAS_DEFAULT_PROCESSING_STEPS = [
-    {"DetLongMaxRescale": None},
-    {"CenterPad": {"pad_value": 114}},
-    {"Standardize": {"max_value": 255.0}},
-]
 
 
 class Colors:
@@ -53,7 +49,7 @@ class Labels:
 
 
 class CustomMetadata:
-    keys = ["type", "original_insz", "iou_tresh", "score_tresh", "prep_steps", "labels"]
+    keys = ["type", "original_insz", "iou_thres", "score_thres", "prep_steps", "labels"]
 
     def __init__(self, path):
         with open(path) as f:
@@ -65,8 +61,8 @@ class CustomMetadata:
 
         self.type = data["type"]
         self.original_insz = data["original_insz"]
-        self.iou_tresh = data["iou_tresh"]
-        self.score_tresh = data["score_tresh"]
+        self.iou_thres = data["iou_thres"]
+        self.score_thres = data["score_thres"]
         self.prep_steps = data["prep_steps"]
         self.labels = data["labels"]
 
@@ -81,3 +77,36 @@ def log_warning(header, body):
 
 def log_error(header, body):
     print("❌ \033[1m\033[91m" + header + ": \033[0m" + body)
+
+
+def export_image(img, path):
+    if path:
+        print("🚀", end=" ")
+        log_info("Exporting Image", path)
+        cv2.imwrite(path, img)
+
+
+class VideoWriter:
+    def __init__(self, cap, path):
+        self.export = path
+
+        if self.export:
+            if cap.isOpened():
+                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                fps = cap.get(cv2.CAP_PROP_FPS)
+            else:
+                raise NotImplementedError("Opencv Video Capture isn't opened yet!")
+
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            self.out = cv2.VideoWriter(path, fourcc, fps, (width, height))
+
+    def write(self, frame):
+        if self.export:
+            self.out.write(frame)
+
+    def close(self):
+        if self.export:
+            print("🚀", end=" ")
+            log_info("Exporting video", self.export)
+            self.out.release()
