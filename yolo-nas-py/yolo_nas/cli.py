@@ -7,8 +7,8 @@ from .processing import YOLO_NAS_DEFAULT_PROCESSING_STEPS
 from .utils import log_info, CustomMetadata, COCO_DEFAULT_LABELS
 
 Source = namedtuple("Source", "type path")
-Net = namedtuple("Source", "path gpu dnn labels")
-Processing = namedtuple("Source", "input_shape prep_steps score_thres iou_thres")
+Net = namedtuple("Net", "path gpu dnn labels")
+Processing = namedtuple("Processing", "input_shape prep_steps score_thres iou_thres")
 Configs = namedtuple("Configs", "net source processing export")
 
 

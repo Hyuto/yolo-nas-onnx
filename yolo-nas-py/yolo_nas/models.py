@@ -75,6 +75,16 @@ class DNN_LOADER:
             self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
             self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
+    def assert_input_shape(self, input_shape=None):
+        """check input shape"""
+        if input_shape:
+            if input_shape != self.input_shape:
+                log_warning(
+                    "Input Shape",
+                    "Model have different input shape with the original input shape on metadata! "
+                    + "It can lead to lower detection performance.",
+                )
+
     def forward(self, input_):
         """Get model prediction"""
         self.net.setInput(input_, self.input_name)
