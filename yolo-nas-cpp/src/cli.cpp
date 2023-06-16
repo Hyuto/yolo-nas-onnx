@@ -1,15 +1,8 @@
 #include <argparse/argparse.hpp>
 #include <fstream>
+
 #include "utils.hpp"
 #include "cli.hpp"
-
-json YOLO_NAS_DEFAULT_PROCESSING_STEPS = json::parse(R"(
-    [
-        {"DetLongMaxRescale": null},
-        {"CenterPad": {"pad_value": 114}},
-        {"Standardize": {"max_value": 255.0}}
-    ]
-)");
 
 Config parseCLI(int argc, char **argv)
 {
@@ -29,11 +22,11 @@ Config parseCLI(int argc, char **argv)
         .default_value(false)
         .implicit_value(true)
         .help("Use GPU if available");
-    program.add_argument("--score-tresh")
+    program.add_argument("--score-thresh")
         .default_value(0.25f)
         .help("Float representing the threshold for deciding when to remove boxes")
         .scan<'g', float>();
-    program.add_argument("--iou-tresh")
+    program.add_argument("--iou-thresh")
         .default_value(0.45f)
         .help("Float representing the threshold for deciding whether boxes overlap too much with respect to IOU")
         .scan<'g', float>();
@@ -56,8 +49,8 @@ Config parseCLI(int argc, char **argv)
 
     std::string netPath = program.get<std::string>("model");
     bool useGPU = program.get<bool>("--gpu");
-    float scoreTresh = program.get<float>("--score-tresh"),
-          iouTresh = program.get<float>("--iou-tresh");
+    float scoreThresh = program.get<float>("--score-thresh"),
+          iouThresh = program.get<float>("--iou-thresh");
     std::vector<int> imgSize = program.get<std::vector<int>>("--imgsz");
     auto imgPath = program.present("-I"),
          vidPath = program.present("-V"),
@@ -92,10 +85,6 @@ Config parseCLI(int argc, char **argv)
     if (imgSize.size() == 1)
         imgSize.push_back(imgSize[0]);
 
-    exists(netPath);
-    Net net{netPath, useGPU, COCO_LABELS};
-    Processing processing{imgSize, YOLO_NAS_DEFAULT_PROCESSING_STEPS, scoreTresh, iouTresh};
-
     if (customMetadata)
     {
         exists(customMetadata.value());
@@ -110,6 +99,12 @@ Config parseCLI(int argc, char **argv)
         } */
     }
 
+    json prepsteps;
+
+    exists(netPath);
+    Net net{netPath, useGPU, COCO_LABELS};
+    Processing processing{imgSize, prepsteps, scoreThresh, iouThresh};
+
     std::string exportPath = exportArgs ? exportArgs.value() : "";
 
     Config configurations{net, source, processing, exportPath};
@@ -120,8 +115,8 @@ Config parseCLI(int argc, char **argv)
     std::cout << " imgsz="
               << "[" << configurations.processing.inputShape[0] << "," << configurations.processing.inputShape[1] << "]";
     std::cout << " gpu=" << (configurations.net.gpu ? "true" : "false");
-    std::cout << " score-tresh=" << configurations.processing.scoreThresh;
-    std::cout << " iou-tresh=" << configurations.processing.iouThresh;
+    std::cout << " score-thresh=" << configurations.processing.scoreThresh;
+    std::cout << " iou-thresh=" << configurations.processing.iouThresh;
     if (customMetadata)
         std::cout << " custom-metadata=" << customMetadata.value();
     if (exportArgs)

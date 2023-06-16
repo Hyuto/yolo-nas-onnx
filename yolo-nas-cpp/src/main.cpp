@@ -7,7 +7,8 @@
 int main(int argc, char **argv)
 {
     Config args = parseCLI(argc, argv);
-    YoloNAS net(args.net.path, args.processing.inputShape, args.net.gpu, args.processing.scoreThresh, args.processing.iouThresh);
+    YoloNAS net(args.net.path, args.net.gpu, args.processing.PrepSteps,
+                args.processing.inputShape, args.processing.scoreThresh, args.processing.iouThresh);
 
     if (args.source.type == IMAGE)
     {
