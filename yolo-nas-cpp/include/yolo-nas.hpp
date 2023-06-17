@@ -11,15 +11,17 @@ class YoloNAS
 {
 private:
     int netInputShape[4] = {1, 3, 0, 0};
-    float scoreThresh;
-    float iouThresh;
     void warmup(int round);
     Colors colors;
 
 public:
     cv::dnn::Net net;
+    float scoreThresh;
+    float iouThresh;
+    std::vector<std::string> classLabels;
+
     PreProcessing preprocess;
     PostProcessing postprocess;
-    YoloNAS(std::string netPath, bool cuda, json &prepSteps, std::vector<int> imgsz, float score, float iou);
+    YoloNAS(std::string netPath, bool cuda, json &prepSteps, std::vector<int> imgsz, float score, float iou, std::vector<std::string> &labels);
     void predict(cv::Mat &img);
 };

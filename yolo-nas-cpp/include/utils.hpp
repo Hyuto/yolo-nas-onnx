@@ -11,6 +11,8 @@ std::string LogError(std::string header, std::string body);
 
 void exists(std::string path);
 
+bool isNumber(const std::string &s);
+
 const std::vector<std::string> COCO_LABELS{"person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
                                            "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
                                            "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",

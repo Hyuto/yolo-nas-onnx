@@ -10,9 +10,12 @@ PreProcessing::PreProcessing() {}
 PreProcessing::PreProcessing(json &steps, std::vector<int> shape)
 {
     if (!steps.is_null())
+    {
+        prepSteps = {};
         for (auto &step : steps)
             if (!step.is_null())
                 prepSteps.push_back(step);
+    }
 
     outShape = cv::Size(shape[0], shape[1]);
 }
@@ -133,9 +136,12 @@ PostProcessing::PostProcessing() {}
 PostProcessing::PostProcessing(json &steps, float score, float iou)
 {
     if (!steps.is_null())
+    {
+        prepSteps = {};
         for (auto &step : steps)
             if (!step.is_null())
                 prepSteps.push_back(step);
+    }
 
     scoreThresh = score;
     iouThresh = iou;

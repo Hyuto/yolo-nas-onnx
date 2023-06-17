@@ -28,8 +28,8 @@ struct Processing
 {
     std::vector<int> inputShape;
     json PrepSteps;
-    float scoreThresh;
-    float iouThresh;
+    float scoreThresh = -1.0f;
+    float iouThresh = -1.0f;
 };
 
 struct Config

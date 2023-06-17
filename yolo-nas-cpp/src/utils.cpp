@@ -28,6 +28,14 @@ void exists(std::string path)
     }
 }
 
+bool isNumber(const std::string &s)
+{
+    std::string::const_iterator it = s.begin();
+    while (it != s.end() && std::isdigit(*it))
+        ++it;
+    return !s.empty() && it == s.end();
+}
+
 VideoExporter::VideoExporter(cv::VideoCapture &cap, std::string path)
 {
     exportPath = path;

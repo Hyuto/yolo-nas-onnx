@@ -20,4 +20,4 @@ public:
     }
 };
 
-void draw_box(cv::Mat &source, cv::Rect &box, int &label, float &score, cv::Scalar color, float alpha = 0.25);
+void draw_box(cv::Mat &source, cv::Rect &box, std::string &label, float &score, cv::Scalar color, float alpha = 0.25);

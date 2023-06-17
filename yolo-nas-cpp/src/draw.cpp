@@ -1,8 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include "utils.hpp"
-
 void check_boxes(cv::Mat &source, cv::Rect &box)
 {
     if (box.x < 0)
@@ -15,7 +13,7 @@ void check_boxes(cv::Mat &source, cv::Rect &box)
         box.height = source.rows - box.y;
 }
 
-void draw_box(cv::Mat &source, cv::Rect &box, int &label, float &score, cv::Scalar color, float alpha = 0.25)
+void draw_box(cv::Mat &source, cv::Rect &box, std::string &label, float &score, cv::Scalar color, float alpha)
 {
     check_boxes(source, box); // check overflow boxes
 
@@ -31,7 +29,7 @@ void draw_box(cv::Mat &source, cv::Rect &box, int &label, float &score, cv::Scal
     double size = std::min<int>(source.cols, source.rows) * 0.0007;
     int thickness = (int)std::floor((float)std::min<int>(source.cols, source.rows) * 0.001f);
     int baseline = 0;
-    std::string text = COCO_LABELS[label] + " - " + std::to_string(score * 100).substr(0, 5) + "%";
+    std::string text = label + " - " + std::to_string(score * 100).substr(0, 5) + "%";
     cv::Size labelSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, size, thickness, &baseline);
     baseline += thickness;
 

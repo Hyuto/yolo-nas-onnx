@@ -4,6 +4,8 @@
 #include "utils.hpp"
 #include "cli.hpp"
 
+#define EXTRACT(x, j) x = j[#x].get<decltype(x)>()
+
 Config parseCLI(int argc, char **argv)
 {
     argparse::ArgumentParser program("yolo-nas-cpp");
@@ -14,21 +16,18 @@ Config parseCLI(int argc, char **argv)
     program.add_argument("-V", "--video").help("Path to the video source").metavar("VIDEO");
 
     program.add_argument("--imgsz")
-        .help("Model input size")
+        .help("Model input size [default: {640 640}]")
         .nargs(1, 2)
-        .default_value(std::vector<int>{640, 640})
         .scan<'i', int>();
     program.add_argument("--gpu")
         .default_value(false)
         .implicit_value(true)
         .help("Use GPU if available");
     program.add_argument("--score-thresh")
-        .default_value(0.25f)
-        .help("Float representing the threshold for deciding when to remove boxes")
+        .help("Float representing the threshold for deciding when to remove boxes [default: 0.25]")
         .scan<'g', float>();
     program.add_argument("--iou-thresh")
-        .default_value(0.45f)
-        .help("Float representing the threshold for deciding whether boxes overlap too much with respect to IOU")
+        .help("Float representing the threshold for deciding whether boxes overlap too much with respect to IOU [default: 0.45]")
         .scan<'g', float>();
 
     program.add_argument("--export")
@@ -49,61 +48,91 @@ Config parseCLI(int argc, char **argv)
 
     std::string netPath = program.get<std::string>("model");
     bool useGPU = program.get<bool>("--gpu");
-    float scoreThresh = program.get<float>("--score-thresh"),
-          iouThresh = program.get<float>("--iou-thresh");
-    std::vector<int> imgSize = program.get<std::vector<int>>("--imgsz");
-    auto imgPath = program.present("-I"),
-         vidPath = program.present("-V"),
-         customMetadata = program.present("--custom-metadata"),
-         exportArgs = program.present("--export");
+    auto imgPathArgs = program.present<std::string>("-I"),
+         vidPathArgs = program.present<std::string>("-V"),
+         customMetadataArgs = program.present<std::string>("--custom-metadata"),
+         exportArgs = program.present<std::string>("--export");
+    auto scoreThreshArgs = program.present<float>("--score-thresh"),
+         iouThreshArgs = program.present<float>("--iou-thresh");
+    auto imgSizeArgs = program.present<std::vector<int>>("--imgsz");
 
-    if (imgPath && vidPath)
+    if (imgPathArgs && vidPathArgs)
     {
         std::cerr << LogError("Double Entry", "Please specify either image or video source!") << std::endl;
         std::abort();
     }
-    else if (!(imgPath || vidPath))
+    else if (!(imgPathArgs || vidPathArgs))
     {
         std::cerr << LogError("No Entry", "Please input either image or video source!") << std::endl;
         std::abort();
     }
 
     Source source;
-    if (imgPath)
+    if (imgPathArgs)
     {
-        exists(imgPath.value());
+        exists(imgPathArgs.value());
         source.type = IMAGE;
-        source.path = imgPath.value();
+        source.path = imgPathArgs.value();
     }
-    else if (vidPath)
+    else if (vidPathArgs)
     {
-        exists(vidPath.value());
+        std::string vidPath = vidPathArgs.value();
+        if (vidPath != "0")
+            exists(vidPath);
         source.type = VIDEO;
-        source.path = vidPath.value();
+        source.path = vidPath;
     }
 
-    if (imgSize.size() == 1)
-        imgSize.push_back(imgSize[0]);
-
-    if (customMetadata)
+    Processing processing;
+    Net net;
+    if (customMetadataArgs)
     {
-        exists(customMetadata.value());
+        exists(customMetadataArgs.value());
 
-        /* std::ifstream f(customMetadata.value());
-        json data = json::parse(f);
+        std::ifstream f(customMetadataArgs.value());
+        json metadata = json::parse(f);
 
-        for (auto x : data["prep_steps"])
-        {
-            if (!x.is_null())
-                std::cout << x.dump(4) << std::endl;
-        } */
+        std::vector<int> original_insz;
+        EXTRACT(original_insz, metadata);
+        processing.inputShape = {original_insz[3], original_insz[2]};
+
+        float iou_thres, score_thres;
+        EXTRACT(iou_thres, metadata);
+        EXTRACT(score_thres, metadata);
+        processing.iouThresh = iouThreshArgs ? iouThreshArgs.value() : iou_thres;
+        processing.scoreThresh = scoreThreshArgs ? iouThreshArgs.value() : score_thres;
+
+        processing.PrepSteps = metadata["prep_steps"];
+
+        std::vector<std::string> labels;
+        EXTRACT(labels, metadata);
+        net.labels = labels;
     }
 
-    json prepsteps;
+    if (imgSizeArgs)
+    {
+        std::vector<int> imgsz = imgSizeArgs.value();
+        if (imgsz.size() == 1)
+            imgsz.push_back(imgsz[0]);
+
+        if (processing.inputShape.size() == 2)
+            if (!(imgsz == processing.inputShape))
+                std::cout << LogWarning("Input Size", "Input size is different from Original Input size from metadata. This will lead to low detection performance or Runtime Error!") << std::endl;
+        processing.inputShape = imgsz;
+    }
+    else if (processing.inputShape.size() == 0)
+        processing.inputShape = {640, 640};
+
+    if (processing.scoreThresh == -1.0f)
+        processing.scoreThresh = scoreThreshArgs ? scoreThreshArgs.value() : 0.25f;
+    if (processing.iouThresh == -1.0f)
+        processing.iouThresh = iouThreshArgs ? iouThreshArgs.value() : 0.45f;
 
     exists(netPath);
-    Net net{netPath, useGPU, COCO_LABELS};
-    Processing processing{imgSize, prepsteps, scoreThresh, iouThresh};
+    net.path = netPath;
+    net.gpu = useGPU;
+    if (net.labels.size() == 0)
+        net.labels = COCO_LABELS;
 
     std::string exportPath = exportArgs ? exportArgs.value() : "";
 
@@ -117,8 +146,8 @@ Config parseCLI(int argc, char **argv)
     std::cout << " gpu=" << (configurations.net.gpu ? "true" : "false");
     std::cout << " score-thresh=" << configurations.processing.scoreThresh;
     std::cout << " iou-thresh=" << configurations.processing.iouThresh;
-    if (customMetadata)
-        std::cout << " custom-metadata=" << customMetadata.value();
+    if (customMetadataArgs)
+        std::cout << " custom-metadata=" << customMetadataArgs.value();
     if (exportArgs)
         std::cout << " export=" << exportPath;
     std::cout << std::endl;

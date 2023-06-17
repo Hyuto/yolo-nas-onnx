@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 
 #include "utils.hpp"
 #include "cli.hpp"
@@ -8,7 +9,8 @@ int main(int argc, char **argv)
 {
     Config args = parseCLI(argc, argv);
     YoloNAS net(args.net.path, args.net.gpu, args.processing.PrepSteps,
-                args.processing.inputShape, args.processing.scoreThresh, args.processing.iouThresh);
+                args.processing.inputShape, args.processing.scoreThresh,
+                args.processing.iouThresh, args.net.labels);
 
     if (args.source.type == IMAGE)
     {
@@ -27,8 +29,19 @@ int main(int argc, char **argv)
     }
     else if (args.source.type == VIDEO)
     {
-        cv::VideoCapture cap(args.source.path == "0" ? 0 : args.source.path);
-        std::string name = args.source.path == "0" ? "Webcam" : args.source.path;
+        cv::VideoCapture cap;
+        std::string name;
+        if (isNumber(args.source.path))
+        {
+            int source = std::stoi(args.source.path);
+            cap = cv::VideoCapture(source);
+            name = "Webcam: " + args.source.path;
+        }
+        else
+        {
+            cap = cv::VideoCapture(args.source.path);
+            name = args.source.path;
+        }
 
         // check if camera opened successfully
         if (!cap.isOpened())

@@ -1,7 +1,7 @@
 #include "utils.hpp"
 #include "yolo-nas.hpp"
 
-YoloNAS::YoloNAS(std::string netPath, bool cuda, json &prepSteps, std::vector<int> imgsz, float score, float iou)
+YoloNAS::YoloNAS(std::string netPath, bool cuda, json &prepSteps, std::vector<int> imgsz, float score, float iou, std::vector<std::string> &labels)
 {
     net = cv::dnn::readNetFromONNX(netPath);
     if (cuda && cv::cuda::getCudaEnabledDeviceCount() > 0)
@@ -21,6 +21,7 @@ YoloNAS::YoloNAS(std::string netPath, bool cuda, json &prepSteps, std::vector<in
 
     scoreThresh = score;
     iouThresh = iou;
+    classLabels = labels;
 
     preprocess = PreProcessing(prepSteps, imgsz);
     postprocess = PostProcessing(prepSteps, score, iou);
@@ -66,6 +67,6 @@ void YoloNAS::predict(cv::Mat &img)
         float score = scores[x];
         cv::Scalar color = colors.get(classID);
         cv::rectangle(img, boxes[x], color, 2);
-        draw_box(img, boxes[x], classID, score, color);
+        draw_box(img, boxes[x], classLabels[classID], score, color);
     }
 }
