@@ -28,7 +28,9 @@ const App = () => {
 
   // wait until opencv.js initialized
   cv["onRuntimeInitialized"] = async () => {
-    await configs.init();
+    await configs.init(); // init configs
+
+    // setup processing
     const prep = new PreProcessing(configs.prepSteps, [
       configs.inputShape[3],
       configs.inputShape[2],
