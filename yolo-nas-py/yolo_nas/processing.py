@@ -30,7 +30,7 @@ class Preprocessing:
 
     @staticmethod
     def __rescale_img(img, out_shape):
-        """rescale func"""
+        """default rescale func"""
         return cv2.resize(img, dsize=out_shape, interpolation=cv2.INTER_LINEAR).astype(np.uint8)
 
     def _standarize(self, img, max_value):
@@ -42,7 +42,7 @@ class Preprocessing:
         scale_factor_h, scale_factor_w = (
             self.out_shape[0] / img.shape[0],
             self.out_shape[1] / img.shape[1],
-        )
+        )  # calc scale factor
         return self.__rescale_img(img, self.out_shape), {
             "scale_factors": (scale_factor_w, scale_factor_h)
         }
@@ -50,9 +50,11 @@ class Preprocessing:
     def _det_long_max_rescale(self, img):
         """Rescale image to output based on max size"""
         height, width = img.shape[:2]
-        scale_factor = min((self.out_shape[1] - 4) / height, (self.out_shape[0] - 4) / width)
+        scale_factor = min(
+            (self.out_shape[1] - 4) / height, (self.out_shape[0] - 4) / width
+        )  # calc scale factor from max size
 
-        if scale_factor != 1.0:
+        if scale_factor != 1.0:  # resize if scale factor isn't 1
             new_height, new_width = round(height * scale_factor), round(width * scale_factor)
             img = self.__rescale_img(img, (new_width, new_height))
 
@@ -97,16 +99,19 @@ class Preprocessing:
 
     def __call__(self, img):
         """Do all preprocessing steps on single image"""
-        img = img.copy()
-        metadata = []
-        for st in self.steps:
-            if not st:  # if steps isn't None
-                continue
-            name, kwargs = list(st.items())[0]
-            img, meta = self._call_fn(name)(img, **kwargs) if kwargs else self._call_fn(name)(img)
-            metadata.append(meta)
+        img = img.copy()  # copy image
+        metadata = []  # init metadata list
 
-        img = cv2.dnn.blobFromImage(img, swapRB=True)
+        for st in self.steps:  # loop processing steps
+            if not st:  # if step isn't None
+                continue
+            name, kwargs = list(st.items())[0]  # name and kwargs from step
+            img, meta = (
+                self._call_fn(name)(img, **kwargs) if kwargs else self._call_fn(name)(img)
+            )  # process image
+            metadata.append(meta)  # append metadata
+
+        img = cv2.dnn.blobFromImage(img, swapRB=True)  # image to blob [1, c, h, w] RGB
         return img, metadata
 
 
@@ -158,23 +163,25 @@ class Postprocessing:
 
     def __call__(self, outputs, metadata):
         """Do all preprocessing steps on single output"""
-        boxes, raw_scores = outputs
-        boxes = np.squeeze(boxes, 0)
+        boxes, raw_scores = outputs  # get boxes and scores from outputs
+        boxes = np.squeeze(boxes, 0)  # squeeze boxes [1, n, 4] => [n, 4]
 
-        metadata = metadata.copy()
-        for st in reversed(self.steps):
-            if not st:
+        metadata = metadata.copy()  # copy preprocessing metadata
+        for st in reversed(self.steps):  # reverse looping processing steps
+            if not st:  # if step is None
                 continue
-            name, _ = list(st.items())[0]
-            meta = metadata.pop()
-            if not self._call_fn(name):
+            name, _ = list(st.items())[0]  # get step name
+            meta = metadata.pop()  # get step metadata
+            if not self._call_fn(name):  # if step is None
                 continue
-            boxes = self._call_fn(name)(boxes, meta)
+            boxes = self._call_fn(name)(boxes, meta)  # process boxes
 
         # change xyxy to xywh
         boxes[:, 2] -= boxes[:, 0]
         boxes[:, 3] -= boxes[:, 1]
 
+        # find max from scores and flatten it [1, n, num_class] => [n]
         scores = raw_scores.max(axis=2).flatten()
+        # find index from max scores (class_id) and flatten it [1, n, num_class] => [n]
         classes = np.argmax(raw_scores, axis=2).flatten()
         return boxes, scores, classes

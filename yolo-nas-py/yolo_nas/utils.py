@@ -39,6 +39,18 @@ class Colors:
 
 
 class Labels:
+    """Labels Handler
+
+    Args:
+        labels (List[str]): Models labels (class name)
+
+    Examples:
+        Get label (class name) with color from class_id
+
+        >>> labels = Labels(COCO_DEFAULT_LABELS)
+        >>> labels(10, use_bgr=True)
+    """
+
     colors = Colors()
 
     def __init__(self, labels):
@@ -80,6 +92,12 @@ def log_error(header, body):
 
 
 def export_image(img, path):
+    """Export numpy.ndarray to image if path is specified (isn't None)
+
+    Args:
+        img (numpy.ndarray): Image array
+        path (str): Path to export
+    """
     if path:
         print("🚀", end=" ")
         log_info("Exporting Image", path)
@@ -87,6 +105,13 @@ def export_image(img, path):
 
 
 class VideoWriter:
+    """Video writer. Export video frame by frame if path is specified.
+
+    Args:
+        cap (cv2.VideoCapture): OpenCV VideoCapture instance
+        path (str): Path to export
+    """
+
     def __init__(self, cap, path):
         self.export = path
 
@@ -102,10 +127,12 @@ class VideoWriter:
             self.out = cv2.VideoWriter(path, fourcc, fps, (width, height))
 
     def write(self, frame):
+        """Write frame"""
         if self.export:
             self.out.write(frame)
 
     def close(self):
+        """Close exporter"""
         if self.export:
             print("🚀", end=" ")
             log_info("Exporting video", self.export)

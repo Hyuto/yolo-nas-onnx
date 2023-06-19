@@ -4,7 +4,7 @@ import cv2
 
 def draw_box(source, box, label, score, color, alpha=0.25):
     """Draw boxes on images"""
-    # Fill box
+    # fill box
     crop_box = source[
         box[1] : (box[1] + box[3]), box[0] : (box[0] + box[2])
     ]  # crop box from source
@@ -14,8 +14,10 @@ def draw_box(source, box, label, score, color, alpha=0.25):
     cv2.addWeighted(
         crop_box, 1 - alpha, color_box, alpha, 1.0, crop_box
     )  # weighted from color box to source
+
     cv2.rectangle(source, box, color, 2)  # draw box
 
+    # measuring text
     size = min(source.shape[:2]) * 0.0007
     thickness = int(min(source.shape[:2]) * 0.001)
     (label_width, label_height), _ = cv2.getTextSize(
@@ -24,6 +26,7 @@ def draw_box(source, box, label, score, color, alpha=0.25):
         size,
         thickness,
     )
+    # draw labels (filled rect with text inside)
     cv2.rectangle(
         source,
         (box[0] - 1, box[1] - int(label_height * 2)),

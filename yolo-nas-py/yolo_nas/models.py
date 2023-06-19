@@ -98,6 +98,16 @@ class DNN_LOADER:
 
 
 def load_net(path, gpu=False, dnn=False):
-    if dnn:
+    """Load NET
+
+    Args:
+        path (str): YOLO-NAS ONNX model path
+        gpu (bool, optional): Using GPU?. Defaults to False.
+        dnn (bool, optional): Use OpenCV DNN?. Defaults to False.
+
+    Returns:
+        Optional[ORT_LOADER, DNN_LOADER]: Net loader
+    """
+    if dnn:  # if using OpenCV DNN
         return DNN_LOADER(path, gpu)
     return ORT_LOADER(path, gpu)

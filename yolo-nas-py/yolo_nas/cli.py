@@ -75,6 +75,7 @@ def get_configs():
         if not os.path.exists(os.path.dirname(opt.export)):
             raise FileNotFoundError("Wrong path! Export directory not found.")
 
+    # Load metadata file if present
     metadata = CustomMetadata(opt.custom_metadata) if opt.custom_metadata else None
     if metadata:
         if not opt.score_thres:
@@ -82,12 +83,13 @@ def get_configs():
         if not opt.iou_thres:
             opt.iou_thres = metadata.iou_thres
 
-    # default val
+    # default args
     if not opt.score_thres:
         opt.score_thres = 0.25
     if not opt.iou_thres:
         opt.iou_thres = 0.45
 
+    # configs
     source = Source("image" if opt.image else "video", opt.image if opt.image else opt.video)
     net = Net(opt.model, opt.gpu, opt.dnn, metadata.labels if metadata else COCO_DEFAULT_LABELS)
     processing = Processing(
