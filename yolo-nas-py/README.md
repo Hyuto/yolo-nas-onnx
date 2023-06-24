@@ -24,7 +24,7 @@ python detect.py -m <YOLO-NAS-ONNX-MODEL-PATH> -i <IMAGE-INPUT-PATH>
 python detect.py -m <YOLO-NAS-ONNX-MODEL-PATH> -v <VIDEO-INPUT-PATH>
 ```
 
-Note: you can pass `0` on `VIDEO-INPUT-PATH` to direct processing from webcam.
+Note: you can pass `int` as an index on `VIDEO-INPUT-PATH` to direct processing from webcam.
 
 ## Custom Trained YOLO-NAS Models
 
