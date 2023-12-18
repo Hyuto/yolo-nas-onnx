@@ -19,13 +19,20 @@ Run YOLO-NAS models with ONNX **without using Pytorch**. Inferencing YOLO-NAS ON
 
 ## Generate ONNX Model
 
-Generate YOLO-NAS ONNX model. You can convert the model using the following code after installing `super_gradients` library.
+Generate YOLO-NAS ONNX model **without preprocessing and postprocessing within the model**.
+You can convert the model using the following code after installing `super_gradients` library.
+
+**Example: Exporting YOLO-NAS S**
 
 ```python
 from super_gradients.training import models
+from super_gradients.common.object_names import Models
 
-net = models.get("yolo_nas_s", pretrained_weights="coco")
-models.convert_to_onnx(model=net, input_shape=(3,640,640), out_path="yolo_nas_s.onnx")
+model = models.get(Models.YOLO_NAS_S, pretrained_weights="coco")
+
+model.eval()
+model.prep_model_for_conversion(input_size=[1, 3, 640, 640])
+model.export("yolo_nas_s.onnx", postprocessing=None, preprocessing=None)
 ```
 
 ## Custom Model
