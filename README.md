@@ -32,7 +32,8 @@ model = models.get(Models.YOLO_NAS_S, pretrained_weights="coco")
 
 model.eval()
 model.prep_model_for_conversion(input_size=[1, 3, 640, 640])
-model.export("yolo_nas_s.onnx", postprocessing=None, preprocessing=None)
+model.export("yolo_nas_s.onnx", postprocessing=None, preprocessing=None,
+             onnx_export_kwargs={"opset_version":11})
 ```
 
 ## Custom Model
